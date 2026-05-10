@@ -1803,7 +1803,9 @@ function renderGame(gs) {
     window._winnerShown = true;
     const w = gs.players.find(p => p.id === gs.winner);
     showWinnerFlash(w?.name || '?');
-    setTimeout(() => showWinnerAnimation(gs), 800);
+    // Capture a snapshot of gs so the 800ms delay always uses the correct state
+    const gsSnapshot = JSON.parse(JSON.stringify(gs));
+    setTimeout(() => showWinnerAnimation(gsSnapshot), 800);
   }
   if (gs.phase !== 'end') window._winnerShown = false;
 
@@ -3085,10 +3087,8 @@ function playSwapAnimation(elIdA, elIdB, onDone) {
     canvas.height = window.innerHeight;
     stage.classList.add('show');
 
-    if (_wRunning) return;
-    _wRunning = true;
-
     cancelAnimationFrame(_wAnimId);
+    _wRunning = true;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     _wSetStyle(canvas, { opacity: '0' });
     _wSetStyle(card,   { opacity: '0', transform: 'translate(-50%,-50%) scale(0.6)', transition: 'none' });
@@ -3122,6 +3122,8 @@ function playSwapAnimation(elIdA, elIdB, onDone) {
   window.dismissWinnerAnim = function () {
     const stage = document.getElementById('winnerStage');
     stage.classList.remove('show');
+    cancelAnimationFrame(_wAnimId);
+    _wRunning = false;
     backToLobby();
   };
 })();
