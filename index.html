@@ -1,0 +1,3018 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CABO – Game of Thrones Edition</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #0d1f0f;
+    --green-mid: #1a3a1e;
+    --green-light: #2a5c30;
+    --gold: #c9a84c;
+    --gold-light: #e8c96e;
+    --gold-dark: #8a6a20;
+    --cream: #f0e8d0;
+    --card-back: #0a1628;
+    --red: #8b1a1a;
+    --crimson: #c0392b;
+    --text: #1a1a1a;
+    --muted: #7a7060;
+    --white: #faf6ef;
+    --shadow: 0 4px 24px rgba(0,0,0,0.4);
+    --radius: 12px;
+    --stone: #2c2c2c;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'IM Fell English', serif;
+    background: var(--green);
+    color: var(--cream);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse at 20% 50%, rgba(42,92,48,0.18) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 20%, rgba(26,58,30,0.25) 0%, transparent 50%),
+      url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23c9a84c' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── SCREENS ── */
+  .screen { display: none; min-height: 100vh; position: relative; z-index: 1; }
+  .screen.active { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; }
+
+  /* ── LOBBY ── */
+  .logo-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 36px;
+  }
+  .logo-svg-wrap {
+    width: clamp(200px, 40vw, 320px);
+    margin-bottom: 8px;
+    filter: drop-shadow(0 4px 24px rgba(201,168,76,0.35));
+  }
+  .tagline {
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: var(--gold-dark);
+    margin-top: 4px;
+  }
+  .lobby-box {
+    background: rgba(10,5,2,0.7);
+    border: 1px solid rgba(201,168,76,0.3);
+    border-radius: 4px;
+    padding: 36px;
+    width: 100%;
+    max-width: 420px;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 0 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(201,168,76,0.1);
+    position: relative;
+  }
+  .lobby-box::before {
+    content: '';
+    position: absolute;
+    top: -1px; left: 20px; right: 20px; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+  .lobby-box h2 {
+    font-family: 'Cinzel', serif;
+    font-size: 18px;
+    color: var(--gold);
+    margin-bottom: 24px;
+    text-align: center;
+    letter-spacing: 0.1em;
+  }
+  .field-group { margin-bottom: 16px; }
+  .field-group label {
+    display: block;
+    font-family: 'Cinzel', serif;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold-dark);
+    margin-bottom: 6px;
+  }
+  input[type=text], input[type=number] {
+    width: 100%;
+    padding: 12px 16px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(201,168,76,0.2);
+    border-radius: 2px;
+    color: var(--cream);
+    font-family: 'IM Fell English', serif;
+    font-size: 16px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input[type=text]:focus, input[type=number]:focus { border-color: var(--gold); }
+  input[type=text]::placeholder { color: rgba(240,232,208,0.3); }
+  .btn {
+    width: 100%;
+    padding: 13px;
+    border: none;
+    border-radius: 2px;
+    font-family: 'Cinzel', serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, #8a6a20 0%, #c9a84c 50%, #8a6a20 100%);
+    color: #0d1f0f;
+    box-shadow: 0 2px 12px rgba(201,168,76,0.2);
+  }
+  .btn-primary:hover { filter: brightness(1.15); transform: translateY(-1px); box-shadow: 0 4px 20px rgba(201,168,76,0.35); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .btn-secondary {
+    background: transparent;
+    color: var(--gold);
+    border: 1px solid rgba(201,168,76,0.35);
+    margin-top: 10px;
+  }
+  .btn-secondary:hover { background: rgba(201,168,76,0.08); }
+  .btn-danger {
+    background: linear-gradient(135deg, #5a0a0a 0%, #8b1a1a 50%, #5a0a0a 100%);
+    color: #f0d8b0;
+    box-shadow: 0 2px 12px rgba(139,26,26,0.3);
+  }
+  .btn-danger:hover { filter: brightness(1.2); transform: translateY(-1px); }
+  .btn-info {
+    background: rgba(201,168,76,0.12);
+    border: 1px solid rgba(201,168,76,0.3);
+    color: var(--gold-light);
+  }
+  .btn-info:hover { background: rgba(201,168,76,0.2); }
+  .divider {
+    text-align: center;
+    color: var(--muted);
+    font-family: 'Cinzel', serif;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    margin: 20px 0;
+    position: relative;
+  }
+  .divider::before, .divider::after {
+    content: '';
+    position: absolute;
+    top: 50%; width: 38%;
+    height: 1px;
+    background: rgba(201,168,76,0.15);
+  }
+  .divider::before { left: 0; }
+  .divider::after { right: 0; }
+
+  /* ── WAITING ROOM ── */
+  .room-code-display {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 42px;
+    font-weight: 700;
+    color: var(--gold);
+    letter-spacing: 0.18em;
+    text-align: center;
+    margin: 16px 0;
+    text-shadow: 0 0 30px rgba(201,168,76,0.4);
+  }
+  .player-list { list-style: none; margin: 20px 0; display: flex; flex-direction: column; gap: 8px; }
+  .player-list li {
+    padding: 10px 16px;
+    background: rgba(201,168,76,0.05);
+    border: 1px solid rgba(201,168,76,0.1);
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 15px;
+  }
+  .player-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green-light); }
+  .player-dot.host { background: var(--gold); }
+  .badge {
+    margin-left: auto;
+    font-family: 'Cinzel', serif;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 20px;
+    background: rgba(201,168,76,0.12);
+    color: var(--gold);
+  }
+
+  /* ── GAME TABLE ── */
+  #gameScreen { padding: 12px; justify-content: flex-start; gap: 0; }
+  .game-header {
+    width: 100%;
+    max-width: 900px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0 12px;
+  }
+  .game-logo-mini {
+    height: 36px;
+    filter: drop-shadow(0 2px 8px rgba(201,168,76,0.3));
+  }
+  .round-info { font-family: 'Cinzel', serif; font-size: 12px; color: var(--gold-light); text-align: right; letter-spacing: 0.08em; }
+
+  /* ── TABLE LAYOUT ── */
+  .table-area {
+    width: 100%;
+    max-width: 960px;
+    display: grid;
+    grid-template-columns: 140px 1fr 140px;
+    grid-template-rows: auto auto auto;
+    grid-template-areas:
+      "side-l  top-opp  side-r"
+      "side-l  center   side-r"
+      ".       my-zone  .";
+    gap: 8px;
+    align-items: center;
+  }
+  .top-opponents   { grid-area: top-opp;  display: flex; gap: 10px; justify-content: center; align-items: flex-end; }
+  .side-left       { grid-area: side-l;   display: flex; flex-direction: column; gap: 10px; align-items: center; justify-content: center; }
+  .side-right      { grid-area: side-r;   display: flex; flex-direction: column; gap: 10px; align-items: center; justify-content: center; }
+  .center-row      { grid-area: center; }
+  .my-zone         { grid-area: my-zone; }
+
+  /* Opponent zones */
+  .opponent-zone {
+    background: rgba(0,0,0,0.35);
+    border: 1px solid rgba(201,168,76,0.12);
+    border-radius: var(--radius);
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  /* Side opponents rotate to face inward */
+  .side-left  .opponent-zone { transform: rotate(90deg);  transform-origin: center; width: 130px; }
+  .side-right .opponent-zone { transform: rotate(-90deg); transform-origin: center; width: 130px; }
+  /* Side zone name unrotates so text is readable from viewer */
+  .side-left  .opponent-name { transform: rotate(-90deg); white-space: nowrap; }
+  .side-right .opponent-name { transform: rotate(90deg);  white-space: nowrap; }
+  .opponent-name {
+    font-family: 'Cinzel', serif;
+    font-size: 10px;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    color: var(--gold-light);
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .turn-indicator { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  /* Center: deck + discard */
+  .center-row { display: flex; align-items: center; justify-content: center; gap: 32px; padding: 8px 0; }
+  .pile-area { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .pile-label { font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); }
+
+  /* Cards */
+  .card {
+    width: 72px;
+    height: 108px;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+    transition: transform 0.15s, box-shadow 0.15s;
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    user-select: none;
+    border: 2px solid transparent;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  .card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+  .card.face-down {
+    background: var(--card-back);
+    border-color: rgba(201,168,76,0.2);
+  }
+  .card.face-down .card-back-svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  .card.face-up {
+    background: var(--white);
+    color: var(--text);
+    box-shadow: var(--shadow);
+    border-color: rgba(0,0,0,0.1);
+  }
+  .card.face-up.red-suit { color: var(--red); }
+  .card-value { font-size: 22px; line-height: 1; }
+  .card-suit { font-size: 18px; line-height: 1; }
+  .card.face-up .card-corner {
+    position: absolute;
+    top: 5px; left: 7px;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .card.face-up .card-corner-br {
+    position: absolute;
+    bottom: 5px; right: 7px;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transform: rotate(180deg);
+  }
+  .card.selected {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 2px var(--gold), 0 8px 24px rgba(201,168,76,0.35);
+    transform: translateY(-6px);
+  }
+  .card.highlighted { border-color: #60a5fa; box-shadow: 0 0 0 2px #60a5fa; }
+  .card.small { width: 52px; height: 78px; border-radius: 6px; }
+  .card.small .card-value { font-size: 16px; }
+  .card.small .card-suit { font-size: 13px; }
+  .card.small .card-corner, .card.small .card-corner-br { font-size: 10px; }
+  .card.fire-selectable { border-color: rgba(232,201,110,0.5); }
+  .card.fire-selected {
+    border-color: #f97316;
+    box-shadow: 0 0 0 2px #f97316, 0 8px 24px rgba(249,115,22,0.28);
+    transform: translateY(-6px);
+  }
+  .card.near-card { box-shadow: 0 0 0 1.5px rgba(201,168,76,0.45), 0 4px 12px rgba(0,0,0,0.3); }
+  .card.just-swapped {
+    border-color: #a78bfa;
+    box-shadow: 0 0 0 2px #a78bfa, 0 0 18px 6px rgba(167,139,250,0.5), 0 6px 20px rgba(0,0,0,0.35);
+    animation: swapHalo 1.8s ease-in-out infinite;
+  }
+  @keyframes swapHalo {
+    0%,100% { box-shadow: 0 0 0 2px #a78bfa, 0 0 14px 4px rgba(167,139,250,0.45), 0 6px 20px rgba(0,0,0,0.35); }
+    50%      { box-shadow: 0 0 0 3px #c4b5fd, 0 0 28px 10px rgba(167,139,250,0.7), 0 6px 20px rgba(0,0,0,0.35); }
+  }
+  .swap-badge {
+    position: absolute;
+    top: -9px; left: 50%; transform: translateX(-50%);
+    background: #7c3aed;
+    color: #fff;
+    font-family: 'Cinzel', serif;
+    font-size: 7px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 2px 5px;
+    border-radius: 3px;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 10;
+    box-shadow: 0 1px 6px rgba(124,58,237,0.5);
+  }
+  .btn-end-turn {
+    background: linear-gradient(135deg, #4c1d95 0%, #7c3aed 50%, #4c1d95 100%);
+    color: #ede9fe;
+    box-shadow: 0 2px 12px rgba(124,58,237,0.35);
+    border: none;
+  }
+  .btn-end-turn:hover { filter: brightness(1.18); transform: translateY(-1px); box-shadow: 0 4px 20px rgba(124,58,237,0.5); }
+  .pov-label {
+    font-family: 'Cinzel', serif; font-size: 8px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: rgba(201,168,76,0.45);
+    text-align: center; margin-top: 2px; line-height: 1;
+  }
+  .fire-banner {
+    background: linear-gradient(135deg, rgba(139,26,26,0.95), rgba(80,10,10,0.98));
+    border: 1px solid rgba(249,115,22,0.6); border-radius: 6px;
+    padding: 12px 16px; margin-bottom: 8px; text-align: center;
+    animation: firePulse 1.5s ease-in-out infinite;
+  }
+  @keyframes firePulse {
+    0%,100% { box-shadow: 0 0 8px rgba(249,115,22,0.3); }
+    50% { box-shadow: 0 0 20px rgba(249,115,22,0.6); }
+  }
+  .fire-banner-title { font-family: 'Cinzel', serif; font-size: 13px; color: #f97316; letter-spacing: 0.1em; margin-bottom: 4px; }
+  .fire-banner-sub { font-size: 12px; color: rgba(240,232,208,0.8); line-height: 1.4; }
+  .burned-cards-preview { display: flex; gap: 6px; justify-content: center; margin: 8px 0; flex-wrap: wrap; }
+
+  /* face card art */
+  .card-face-art {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .card-face-art svg { width: 100%; height: 100%; }
+
+  /* Player hand */
+  .my-zone {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(201,168,76,0.15);
+    border-radius: var(--radius);
+    padding: 14px;
+  }
+  .my-zone-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .my-name { font-family: 'Cinzel', serif; font-size: 13px; letter-spacing: 0.1em; color: var(--gold); text-transform: uppercase; }
+  .my-score { font-family: 'Cinzel', serif; font-size: 12px; color: var(--muted); }
+  .hand-row, .opponent-hand { display: grid; grid-template-columns: repeat(2, max-content); gap: 8px; justify-content: center; }
+  .opponent-hand { gap: 6px; }
+
+  /* Action bar */
+  .action-bar { width: 100%; max-width: 900px; display: flex; flex-direction: column; gap: 8px; padding: 8px 0; }
+  .action-msg { text-align: center; font-size: 14px; color: var(--gold-light); min-height: 20px; letter-spacing: 0.04em; }
+  .action-btns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .action-btns .btn { width: auto; padding: 10px 20px; font-size: 12px; letter-spacing: 0.08em; }
+  .drawn-card-preview { display: flex; justify-content: center; margin: 4px 0 8px; }
+  .drawn-card-preview .card { cursor: default; }
+
+  /* Status pill */
+  .status-pill {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-family: 'Cinzel', serif;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+  .status-pill.your-turn { background: rgba(201,168,76,0.18); color: var(--gold); }
+  .status-pill.waiting { background: rgba(255,255,255,0.06); color: var(--muted); }
+
+  /* Game log */
+  .game-log {
+    width: 100%;
+    max-width: 900px;
+    max-height: 80px;
+    overflow-y: auto;
+    padding: 6px 10px;
+    margin-top: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .game-log .log-new { color: var(--gold-light); }
+
+  /* Overlays */
+  .overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(4px);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  .overlay.show { display: flex; }
+  .overlay-box {
+    background: #0d1509;
+    border: 1px solid rgba(201,168,76,0.3);
+    border-radius: 4px;
+    padding: 36px;
+    max-width: 440px;
+    width: 90%;
+    position: relative;
+  }
+  .overlay-box::before {
+    content: '';
+    position: absolute;
+    top: -1px; left: 20px; right: 20px; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+  .overlay-box h2 { font-family: 'Cinzel Decorative', serif; font-size: 22px; color: var(--gold); text-align: center; margin-bottom: 20px; letter-spacing: 0.05em; }
+  .score-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .score-list li {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: rgba(201,168,76,0.05);
+    border: 1px solid rgba(201,168,76,0.1);
+    border-radius: 2px;
+    font-size: 15px;
+  }
+  .score-list li.winner { background: rgba(201,168,76,0.15); border-color: var(--gold); color: var(--gold); }
+
+  /* Peek overlay */
+  .peek-overlay {
+    display: none;
+    position: fixed;
+    bottom: 100px; left: 50%;
+    transform: translateX(-50%);
+    background: #0d1509;
+    border: 1px solid rgba(201,168,76,0.4);
+    border-radius: 4px;
+    padding: 20px 28px;
+    z-index: 200;
+    text-align: center;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+  .peek-overlay.show { display: flex; }
+  #peekMsg { font-family: 'Cinzel', serif; font-size: 13px; color: var(--gold); letter-spacing: 0.1em; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    top: 20px; left: 50%;
+    transform: translateX(-50%) translateY(-80px);
+    background: #0d1509;
+    border: 1px solid var(--gold);
+    color: var(--gold-light);
+    padding: 12px 24px;
+    border-radius: 2px;
+    font-family: 'Cinzel', serif;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    transition: transform 0.3s ease;
+    z-index: 300;
+    white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* ── DEAL ANIMATION ── */
+  #dealOverlay {
+    display: none;
+    position: fixed; inset: 0;
+    z-index: 500;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  #dealOverlay.active { display: block; }
+  .flying-card {
+    position: absolute;
+    width: 72px; height: 108px;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.65), 0 0 0 1px rgba(201,168,76,0.2);
+    pointer-events: none;
+    opacity: 0;
+    will-change: transform, opacity;
+  }
+  .flying-card svg { width: 100%; height: 100%; display: block; }
+  .flying-card .fc-shimmer {
+    position: absolute; inset: 0;
+    background: linear-gradient(115deg, transparent 25%, rgba(255,255,255,0.18) 50%, transparent 75%);
+    transform: translateX(-120%);
+    pointer-events: none;
+  }
+  body.dealing #gameScreen { filter: brightness(0.55); transition: filter 0.25s; }
+  body.dealing #gameScreen .action-bar,
+  body.dealing #gameScreen .game-log { opacity: 0; }
+  body:not(.dealing) #gameScreen { filter: brightness(1); transition: filter 0.6s 0.1s; }
+  body:not(.dealing) #gameScreen .action-bar,
+  body:not(.dealing) #gameScreen .game-log { opacity: 1; transition: opacity 0.5s 0.3s; }
+
+  /* ── WINNER ANIMATION OVERLAY ── */
+  #winnerStage {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    background: rgba(13, 31, 15, 0.92);
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  #winnerStage.show { display: flex; }
+  #winnerStage canvas#wRaysCanvas {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+  }
+  #winnerStage #wRing, #winnerStage #wRing2 {
+    position: absolute;
+    top: 50%; left: 50%;
+    border-radius: 50%;
+    pointer-events: none;
+  }
+  #winnerStage #wRing  { width: 340px; height: 340px; transform: translate(-50%,-50%) scale(0); border: 1.5px solid rgba(201,168,76,0.25); opacity: 0; }
+  #winnerStage #wRing2 { width: 270px; height: 270px; transform: translate(-50%,-50%) scale(0); border: 1px solid rgba(201,168,76,0.15); opacity: 0; }
+  #winnerStage #wCrown {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%,-50%) scale(0);
+    opacity: 0;
+    font-size: 72px;
+    line-height: 1;
+    filter: drop-shadow(0 0 24px rgba(201,168,76,0.6));
+    user-select: none;
+    pointer-events: none;
+  }
+  #wCard {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%,-50%) scale(0.6);
+    opacity: 0;
+    background: linear-gradient(160deg, #12243a 0%, #0a1628 60%, #0d1a10 100%);
+    border: 1px solid rgba(201,168,76,0.45);
+    border-radius: 14px;
+    padding: 28px 36px 24px;
+    text-align: center;
+    min-width: 260px;
+    pointer-events: none;
+    box-shadow: 0 0 60px rgba(201,168,76,0.15), 0 24px 48px rgba(0,0,0,0.7);
+    z-index: 10;
+  }
+  #wCard .wc-eyebrow {
+    font-family: 'Cinzel', serif;
+    font-size: 9px; letter-spacing: 0.3em; text-transform: uppercase;
+    color: rgba(201,168,76,0.5); margin-bottom: 8px;
+  }
+  #wCard .wc-name {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 28px; font-weight: 700; color: #e8c96e;
+    letter-spacing: 0.05em; text-shadow: 0 0 20px rgba(201,168,76,0.5); margin-bottom: 4px;
+  }
+  #wCard .wc-score {
+    font-family: 'Cinzel', serif;
+    font-size: 12px; letter-spacing: 0.15em; color: rgba(201,168,76,0.45); margin-bottom: 18px;
+  }
+  #wCard .wc-divider {
+    width: 60px; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(201,168,76,0.4), transparent);
+    margin: 0 auto 16px;
+  }
+  #wCard .wc-scores { display: flex; flex-direction: column; gap: 6px; }
+  #wCard .wc-row {
+    display: flex; justify-content: space-between;
+    font-family: 'Cinzel', serif;
+    font-size: 11px; letter-spacing: 0.08em; color: rgba(201,168,76,0.5);
+  }
+  #wCard .wc-row.winner-row { color: rgba(201,168,76,0.95); font-size: 12px; }
+  #wCard .wc-cta {
+    margin-top: 22px;
+    font-family: 'Cinzel', serif;
+    font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase;
+    padding: 9px 22px;
+    border-radius: 3px; cursor: pointer; pointer-events: all;
+    background: linear-gradient(135deg, #8a6a20, #c9a84c, #8a6a20);
+    color: #0d1f0f; border: none; font-weight: 700;
+    transition: filter 0.2s;
+  }
+  #wCard .wc-cta:hover { filter: brightness(1.15); }
+
+  .w-particle {
+    position: absolute; border-radius: 50%; pointer-events: none; opacity: 0;
+  }
+</style>
+</head>
+<body>
+
+<!-- SVG DEFS: card back logo + face card art will be rendered inline per card -->
+
+<!-- LOBBY -->
+<div id="lobbyScreen" class="screen active">
+  <div class="logo-area">
+    <!-- GoT-style CABO Logo SVG -->
+    <div class="logo-svg-wrap">
+      <svg viewBox="0 0 320 140" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="goldGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" style="stop-color:#e8c96e;stop-opacity:1"/>
+            <stop offset="45%" style="stop-color:#c9a84c;stop-opacity:1"/>
+            <stop offset="100%" style="stop-color:#7a5a18;stop-opacity:1"/>
+          </linearGradient>
+          <linearGradient id="goldGrad2" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" style="stop-color:#7a5a18"/>
+            <stop offset="50%" style="stop-color:#e8c96e"/>
+            <stop offset="100%" style="stop-color:#7a5a18"/>
+          </linearGradient>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+            <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+
+        <!-- Top decorative bar -->
+        <rect x="20" y="12" width="280" height="1.5" fill="url(#goldGrad2)" opacity="0.8"/>
+
+        <!-- Dragon wing left -->
+        <g opacity="0.7">
+          <path d="M30 55 C20 35 10 45 5 30 C15 38 25 30 35 40 C28 42 22 50 30 55Z" fill="url(#goldGrad)" opacity="0.6"/>
+          <path d="M30 55 C18 48 8 55 5 45 C15 48 22 42 30 55Z" fill="url(#goldGrad)" opacity="0.5"/>
+          <path d="M30 55 C20 55 12 65 8 60 C18 58 25 55 30 55Z" fill="url(#goldGrad)" opacity="0.4"/>
+        </g>
+
+        <!-- Dragon wing right -->
+        <g opacity="0.7">
+          <path d="M290 55 C300 35 310 45 315 30 C305 38 295 30 285 40 C292 42 298 50 290 55Z" fill="url(#goldGrad)" opacity="0.6"/>
+          <path d="M290 55 C302 48 312 55 315 45 C305 48 298 42 290 55Z" fill="url(#goldGrad)" opacity="0.5"/>
+          <path d="M290 55 C300 55 308 65 312 60 C302 58 295 55 290 55Z" fill="url(#goldGrad)" opacity="0.4"/>
+        </g>
+
+        <!-- Crown above CABO -->
+        <g transform="translate(160,22)" filter="url(#glow)">
+          <polygon points="0,-14 -20,-2 -14,8 0,4 14,8 20,-2" fill="url(#goldGrad)" opacity="0.9"/>
+          <circle cx="-20" cy="-2" r="3" fill="#e8c96e"/>
+          <circle cx="0" cy="-14" r="3.5" fill="#e8c96e"/>
+          <circle cx="20" cy="-2" r="3" fill="#e8c96e"/>
+          <circle cx="-14" cy="8" r="2" fill="#c9a84c"/>
+          <circle cx="14" cy="8" r="2" fill="#c9a84c"/>
+        </g>
+
+        <!-- CABO letters -->
+        <text
+          x="160" y="90"
+          text-anchor="middle"
+          font-family="'Cinzel Decorative', 'Cinzel', serif"
+          font-size="68"
+          font-weight="700"
+          fill="url(#goldGrad)"
+          filter="url(#glow)"
+          letter-spacing="6"
+        >CABO</text>
+
+        <!-- Subtitle -->
+        <text x="160" y="108" text-anchor="middle" font-family="'Cinzel', serif" font-size="9" fill="#8a6a20" letter-spacing="6">THE CARD GAME</text>
+
+        <!-- Decorative dividers -->
+        <line x1="20" y1="113" x2="115" y2="113" stroke="#8a6a20" stroke-width="0.8" opacity="0.7"/>
+        <polygon points="130,113 135,110 140,113 135,116" fill="#c9a84c" opacity="0.7"/>
+        <polygon points="180,113 185,110 190,113 185,116" fill="#c9a84c" opacity="0.7"/>
+        <line x1="200" y1="113" x2="300" y2="113" stroke="#8a6a20" stroke-width="0.8" opacity="0.7"/>
+
+        <!-- Iron Throne silhouette hint (swords stacked) -->
+        <g transform="translate(160,128)" opacity="0.4">
+          <rect x="-3" y="-8" width="6" height="16" rx="1" fill="#c9a84c"/>
+          <rect x="-12" y="-4" width="24" height="2" rx="1" fill="#c9a84c"/>
+          <polygon points="0,-12 -2,-8 2,-8" fill="#c9a84c"/>
+        </g>
+
+        <!-- Bottom bar -->
+        <rect x="20" y="126" width="280" height="1.5" fill="url(#goldGrad2)" opacity="0.5"/>
+      </svg>
+    </div>
+    <div class="tagline">Winter is dealt</div>
+  </div>
+
+  <div class="lobby-box">
+    <h2>Enter Your Name</h2>
+    <div class="field-group">
+      <label>Your name</label>
+      <input type="text" id="playerName" placeholder="e.g. Tyrion" maxlength="16">
+    </div>
+    <button class="btn btn-primary" onclick="hostGame()">Create New Game</button>
+    <div class="divider">OR JOIN EXISTING</div>
+    <div class="field-group">
+      <label>Room code</label>
+      <input type="text" id="roomCodeInput" placeholder="e.g. TIGER" maxlength="32" style="text-transform:uppercase">
+    </div>
+    <button class="btn btn-secondary" onclick="joinGame()">Join Game</button>
+
+  </div>
+</div>
+
+<!-- WAITING ROOM -->
+<div id="waitingScreen" class="screen">
+  <div class="lobby-box">
+    <h2>Waiting Room</h2>
+    <p style="text-align:center;font-size:13px;color:var(--muted);margin-bottom:4px;font-family:'Cinzel',serif;letter-spacing:0.05em">Share this code with allies:</p>
+    <p id="connectionStatus" style="text-align:center;font-size:11px;color:var(--gold-dark);margin-bottom:4px;font-family:'Cinzel',serif">⚡ Connecting...</p>
+    <div class="room-code-display" id="displayCode">----</div>
+    <div id="shareInfo" style="text-align:center;font-size:11px;color:var(--muted);margin-bottom:4px;font-family:'Cinzel',serif"></div>
+    <button class="btn btn-info" onclick="copyRoomCode()" style="margin-bottom:12px;font-size:11px;padding:8px">Copy Room Code</button>
+    <p style="text-align:center;font-size:12px;color:var(--muted);margin-bottom:16px;font-family:'Cinzel',serif">Need at least 2 players to start</p>
+    <ul class="player-list" id="waitingPlayerList"></ul>
+    <button class="btn btn-primary" id="startBtn" onclick="startGame()" disabled>Begin the Game</button>
+    <p style="text-align:center;font-size:12px;color:var(--muted);margin-top:12px;font-family:'Cinzel',serif" id="waitNote">Awaiting more players...</p>
+  </div>
+</div>
+
+<!-- GAME -->
+<div id="gameScreen" class="screen">
+  <div class="game-header">
+    <!-- Mini logo for in-game header -->
+    <svg class="game-logo-mini" viewBox="0 0 120 36" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="miniGold" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" style="stop-color:#e8c96e"/>
+          <stop offset="100%" style="stop-color:#8a6a20"/>
+        </linearGradient>
+      </defs>
+      <text x="60" y="28" text-anchor="middle" font-family="'Cinzel Decorative',serif" font-size="28" font-weight="700" fill="url(#miniGold)" letter-spacing="3">CABO</text>
+    </svg>
+    <div class="round-info" style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+      <div id="roundLabel">Round 1</div>
+      <div id="turnStatus" class="status-pill waiting">Waiting...</div>
+      <button id="viewerModeBtn" class="btn btn-secondary" onclick="toggleViewerMode()" style="padding:3px 10px;font-size:9px;margin-top:2px;letter-spacing:0.1em;display:none">🔍 Viewer</button>
+    </div>
+  </div>
+
+  <div class="table-area" id="tableArea">
+    <div class="top-opponents"  id="topOpponents"></div>
+    <div class="side-left"      id="sideLeft"></div>
+    <div class="side-right"     id="sideRight"></div>
+
+    <div class="center-row">
+      <div class="pile-area">
+        <div class="pile-label">Deck</div>
+        <div class="card face-down" id="deckCard" onclick="drawFromDeck()"></div>
+        <div id="deckCount" style="font-size:11px;color:var(--muted);margin-top:2px;font-family:'Cinzel',serif"></div>
+      </div>
+      <div class="pile-area">
+        <div class="pile-label">Discard</div>
+        <div class="card face-down" id="discardCard" onclick="drawFromDiscard()"></div>
+      </div>
+    </div>
+
+    <div class="my-zone">
+      <div class="my-zone-header">
+        <div class="my-name" id="myNameLabel">You</div>
+        <div class="my-score" id="myScoreLabel"></div>
+      </div>
+      <div id="myHand"></div>
+    </div>
+  </div>
+
+  <div class="action-bar">
+    <div class="action-msg" id="actionMsg">Waiting for the game to begin...</div>
+    <div class="action-btns" id="actionBtns"></div>
+  </div>
+
+  <div class="game-log" id="gameLog"></div>
+</div>
+
+<!-- OVERLAYS -->
+<div class="overlay" id="scoreOverlay">
+  <div class="overlay-box">
+    <h2 id="overlayTitle">Round Over</h2>
+    <ul class="score-list" id="scoreList"></ul>
+    <button class="btn btn-primary" id="nextRoundBtn" onclick="nextRound()" style="margin-top:16px">Next Round</button>
+    <button class="btn btn-secondary" id="newGameBtn" onclick="backToLobby()" style="display:none;margin-top:8px">Back to Lobby</button>
+  </div>
+</div>
+
+<div class="peek-overlay" id="peekOverlay">
+  <p id="peekMsg">Your card:</p>
+  <div id="peekCardDisplay"></div>
+  <button class="btn btn-secondary" style="width:160px" onclick="closePeek()">Got it</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- WINNER ANIMATION OVERLAY -->
+<div id="winnerStage">
+  <canvas id="wRaysCanvas"></canvas>
+  <div id="wRing"></div>
+  <div id="wRing2"></div>
+  <div id="wCrown">👑</div>
+  <div id="wCard">
+    <div class="wc-eyebrow">Victory</div>
+    <div class="wc-name" id="wName">—</div>
+    <div class="wc-score" id="wSubtitle">—</div>
+    <div class="wc-divider"></div>
+    <div class="wc-scores" id="wScores"></div>
+    <button class="wc-cta" onclick="dismissWinnerAnim()">Back to Lobby</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// GoT-STYLE CARD BACK SVG (inline, no external file)
+// ═══════════════════════════════════════════
+function cardBackSVG() {
+  return `<svg viewBox="0 0 72 108" xmlns="http://www.w3.org/2000/svg" class="card-back-svg">
+    <defs>
+      <linearGradient id="cbg" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style="stop-color:#0a1628"/>
+        <stop offset="50%" style="stop-color:#12243a"/>
+        <stop offset="100%" style="stop-color:#0a1628"/>
+      </linearGradient>
+      <linearGradient id="cgo" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" style="stop-color:#e8c96e"/>
+        <stop offset="50%" style="stop-color:#c9a84c"/>
+        <stop offset="100%" style="stop-color:#7a5a18"/>
+      </linearGradient>
+      <linearGradient id="cgh" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" style="stop-color:#7a5a18"/>
+        <stop offset="50%" style="stop-color:#c9a84c"/>
+        <stop offset="100%" style="stop-color:#7a5a18"/>
+      </linearGradient>
+      <filter id="cbglow">
+        <feGaussianBlur stdDeviation="1.5" result="b"/>
+        <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+    <!-- Card background -->
+    <rect width="72" height="108" rx="7" fill="url(#cbg)"/>
+    <!-- Outer border -->
+    <rect x="2" y="2" width="68" height="104" rx="6" fill="none" stroke="#c9a84c" stroke-width="0.8" opacity="0.5"/>
+    <!-- Inner border -->
+    <rect x="5" y="5" width="62" height="98" rx="4" fill="none" stroke="#8a6a20" stroke-width="0.5" opacity="0.4"/>
+    <!-- Corner ornaments -->
+    <g fill="#c9a84c" opacity="0.7">
+      <!-- TL -->
+      <polygon points="5,5 12,5 5,12" opacity="0.5"/>
+      <circle cx="8" cy="8" r="1.5"/>
+      <!-- TR -->
+      <polygon points="67,5 60,5 67,12" opacity="0.5"/>
+      <circle cx="64" cy="8" r="1.5"/>
+      <!-- BL -->
+      <polygon points="5,103 12,103 5,96" opacity="0.5"/>
+      <circle cx="8" cy="100" r="1.5"/>
+      <!-- BR -->
+      <polygon points="67,103 60,103 67,96" opacity="0.5"/>
+      <circle cx="64" cy="100" r="1.5"/>
+    </g>
+    <!-- Horizontal ornament lines -->
+    <line x1="8" y1="16" x2="64" y2="16" stroke="url(#cgh)" stroke-width="0.6" opacity="0.5"/>
+    <line x1="8" y1="92" x2="64" y2="92" stroke="url(#cgh)" stroke-width="0.6" opacity="0.5"/>
+
+    <!-- Central dragon sigil -->
+    <g transform="translate(36,54)" filter="url(#cbglow)">
+      <!-- Dragon body -->
+      <ellipse cx="0" cy="0" rx="10" ry="7" fill="none" stroke="#c9a84c" stroke-width="1" opacity="0.6"/>
+      <!-- Dragon neck+head -->
+      <path d="M0,-7 C2,-14 6,-16 8,-13 C6,-11 4,-10 2,-8" fill="none" stroke="#c9a84c" stroke-width="1" opacity="0.6"/>
+      <!-- Dragon head -->
+      <ellipse cx="7" cy="-13" rx="3" ry="2" fill="#c9a84c" opacity="0.5"/>
+      <!-- Dragon horn -->
+      <path d="M7,-15 L9,-19 L8,-15" fill="#c9a84c" opacity="0.6"/>
+      <!-- Left wing -->
+      <path d="M-5,-3 C-16,-10 -22,-4 -20,4 C-15,0 -10,-2 -5,-3Z" fill="#c9a84c" opacity="0.3" stroke="#c9a84c" stroke-width="0.5"/>
+      <path d="M-5,-3 C-18,-2 -22,5 -18,8 C-13,4 -9,2 -5,-3Z" fill="#c9a84c" opacity="0.2"/>
+      <!-- Right wing -->
+      <path d="M5,-3 C16,-10 22,-4 20,4 C15,0 10,-2 5,-3Z" fill="#c9a84c" opacity="0.3" stroke="#c9a84c" stroke-width="0.5"/>
+      <path d="M5,-3 C18,-2 22,5 18,8 C13,4 9,2 5,-3Z" fill="#c9a84c" opacity="0.2"/>
+      <!-- Dragon tail -->
+      <path d="M-10,2 C-14,6 -16,12 -12,14 C-10,10 -10,6 -10,2" fill="none" stroke="#c9a84c" stroke-width="0.8" opacity="0.5"/>
+      <!-- Flame -->
+      <path d="M10,-11 C14,-15 18,-14 17,-9 C15,-11 13,-10 10,-11Z" fill="#c9a84c" opacity="0.6"/>
+    </g>
+
+    <!-- CABO text -->
+    <text x="36" y="82" text-anchor="middle" font-family="'Cinzel Decorative','Cinzel',serif" font-size="7.5" font-weight="700" fill="url(#cgo)" opacity="0.9" letter-spacing="1.5">CABO</text>
+
+    <!-- Top mini crown -->
+    <g transform="translate(36,25)" fill="url(#cgo)" opacity="0.7">
+      <polygon points="0,-7 -8,-1 -5,5 0,3 5,5 8,-1"/>
+      <circle cx="-8" cy="-1" r="1.5"/>
+      <circle cx="0" cy="-7" r="2"/>
+      <circle cx="8" cy="-1" r="1.5"/>
+    </g>
+
+    <!-- Subtle background hex pattern -->
+    <g stroke="#c9a84c" stroke-width="0.2" fill="none" opacity="0.08">
+      <polygon points="36,10 42,13 42,19 36,22 30,19 30,13"/>
+      <polygon points="36,86 42,89 42,95 36,98 30,95 30,89"/>
+    </g>
+  </svg>`;
+}
+
+// ═══════════════════════════════════════════
+// GoT-STYLE FACE CARD ART (J, Q, K)
+// ═══════════════════════════════════════════
+function faceCardArt(rank, suit) {
+  const isRed = suit === 'heart' || suit === 'diamond';
+  const color = isRed ? '#8b1a1a' : '#1a1a1a';
+  const accent = isRed ? '#c9432b' : '#1a3a5c';
+
+  const suitSymbol = { heart:'♥', diamond:'♦', club:'♣', spade:'♠' }[suit] || '?';
+
+  if (rank === 'J') {
+    // Jack - Knight / warrior theme
+    return `<svg viewBox="0 0 72 108" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0">
+      <rect width="72" height="108" fill="white"/>
+      <!-- Shield background -->
+      <path d="M18,30 L54,30 L54,65 L36,78 L18,65Z" fill="${isRed ? '#fff0f0' : '#f0f4ff'}" stroke="${color}" stroke-width="1.2" opacity="0.6"/>
+      <!-- Shield cross -->
+      <line x1="18" y1="47" x2="54" y2="47" stroke="${color}" stroke-width="0.8" opacity="0.4"/>
+      <line x1="36" y1="30" x2="36" y2="78" stroke="${color}" stroke-width="0.8" opacity="0.4"/>
+      <!-- Sword -->
+      <line x1="36" y1="20" x2="36" y2="75" stroke="${color}" stroke-width="2" opacity="0.7"/>
+      <line x1="28" y1="35" x2="44" y2="35" stroke="${color}" stroke-width="2" opacity="0.7"/>
+      <polygon points="36,15 34,22 38,22" fill="${color}" opacity="0.8"/>
+      <!-- Suit symbol center -->
+      <text x="36" y="56" text-anchor="middle" font-size="18" fill="${accent}" opacity="0.7">${suitSymbol}</text>
+      <!-- Helmet top hint -->
+      <ellipse cx="36" cy="24" rx="8" ry="6" fill="${isRed ? '#e8a0a0' : '#a0b8d0'}" opacity="0.5" stroke="${color}" stroke-width="0.8"/>
+    </svg>`;
+  }
+
+  if (rank === 'Q') {
+    // Queen - regal, ornate
+    return `<svg viewBox="0 0 72 108" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0">
+      <rect width="72" height="108" fill="white"/>
+      <!-- Gown skirt shape -->
+      <path d="M24,55 L48,55 L52,90 L20,90Z" fill="${isRed ? '#fff0f0' : '#f0f4ff'}" stroke="${color}" stroke-width="0.8" opacity="0.5"/>
+      <!-- Crown -->
+      <g transform="translate(36,22)">
+        <rect x="-14" y="0" width="28" height="10" fill="${isRed ? '#e8c9c9' : '#c9d8e8'}" stroke="${color}" stroke-width="0.8" opacity="0.7"/>
+        <polygon points="-14,0 -10,-8 -5,-2 0,-10 5,-2 10,-8 14,0" fill="${isRed ? '#c9432b' : '#1a3a5c'}" opacity="0.8"/>
+        <circle cx="-10" cy="-8" r="2" fill="#c9a84c" opacity="0.9"/>
+        <circle cx="0" cy="-10" r="2.5" fill="#c9a84c" opacity="0.9"/>
+        <circle cx="10" cy="-8" r="2" fill="#c9a84c" opacity="0.9"/>
+      </g>
+      <!-- Body/robes -->
+      <ellipse cx="36" cy="48" rx="12" ry="10" fill="${isRed ? '#f5e0e0' : '#e0eaf5'}" stroke="${color}" stroke-width="0.8" opacity="0.6"/>
+      <!-- Suit symbol -->
+      <text x="36" y="72" text-anchor="middle" font-size="20" fill="${accent}" opacity="0.6">${suitSymbol}</text>
+      <!-- Scepter -->
+      <line x1="50" y1="35" x2="48" y2="80" stroke="${color}" stroke-width="1.5" opacity="0.5"/>
+      <circle cx="50" cy="33" r="3" fill="#c9a84c" opacity="0.7"/>
+    </svg>`;
+  }
+
+  if (rank === 'K') {
+    // King - throne, power
+    return `<svg viewBox="0 0 72 108" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0">
+      <rect width="72" height="108" fill="white"/>
+      <!-- Throne back suggestion -->
+      <rect x="18" y="28" width="36" height="55" rx="4" fill="${isRed ? '#fff0f0' : '#f0f4ff'}" stroke="${color}" stroke-width="0.8" opacity="0.3"/>
+      <!-- Large crown -->
+      <g transform="translate(36,24)">
+        <rect x="-16" y="0" width="32" height="12" fill="${isRed ? '#e8b8b8' : '#b8c8e8'}" stroke="${color}" stroke-width="1" opacity="0.8"/>
+        <polygon points="-16,0 -11,-12 -5,-4 0,-14 5,-4 11,-12 16,0" fill="${isRed ? '#8b1a1a' : '#1a3a5c'}" opacity="0.9"/>
+        <circle cx="-11" cy="-12" r="2.5" fill="#c9a84c"/>
+        <circle cx="0" cy="-14" r="3" fill="#c9a84c"/>
+        <circle cx="11" cy="-12" r="2.5" fill="#c9a84c"/>
+        <!-- Crown jewels -->
+        <rect x="-12" y="2" width="8" height="6" rx="1" fill="#c9a84c" opacity="0.5"/>
+        <rect x="4" y="2" width="8" height="6" rx="1" fill="#c9a84c" opacity="0.5"/>
+      </g>
+      <!-- Kingly silhouette robes -->
+      <path d="M22,50 L26,48 L36,52 L46,48 L50,50 L52,85 L20,85Z" fill="${isRed ? '#f0dede' : '#dee8f0'}" stroke="${color}" stroke-width="0.8" opacity="0.5"/>
+      <!-- Large suit symbol -->
+      <text x="36" y="74" text-anchor="middle" font-size="22" fill="${accent}" opacity="0.65">${suitSymbol}</text>
+      <!-- Sword on side -->
+      <line x1="20" y1="40" x2="20" y2="78" stroke="${color}" stroke-width="2" opacity="0.5"/>
+      <line x1="15" y1="48" x2="25" y2="48" stroke="${color}" stroke-width="2" opacity="0.5"/>
+      <polygon points="20,36 18,42 22,42" fill="${color}" opacity="0.6"/>
+    </svg>`;
+  }
+  return '';
+}
+
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+let myName = '';
+let myId = '';
+let roomCode = '';
+let isHost = false;
+let gameState = null;
+let selectedHandIndex = -1;
+let drawnCard = null;
+let drawnFrom = '';
+let abilityTarget = null;
+let fireSelection = [];
+let peekTimeout = null;
+// Temporarily revealed card (shown only while peek overlay is open)
+let tempPeekCard = null; // { ownerId, index }
+// Debug viewer mode — reveals all cards face-up
+let viewerMode = false;
+function toggleViewerMode() {
+  viewerMode = !viewerMode;
+  const btn = document.getElementById('viewerModeBtn');
+  if (btn) {
+    btn.textContent = viewerMode ? '🔍 ON' : '🔍 Viewer';
+    btn.style.background = viewerMode ? 'rgba(249,115,22,0.22)' : '';
+    btn.style.borderColor = viewerMode ? '#f97316' : '';
+    btn.style.color = viewerMode ? '#f97316' : '';
+  }
+  if (gameState) renderGame(gameState);
+}
+
+// ═══════════════════════════════════════════
+// ROOM CODE + ID
+// ═══════════════════════════════════════════
+function genId() { return Math.random().toString(36).substr(2, 9); }
+function genRoomCode() {
+  const words = ['TIGER','CRANE','LOTUS','RIVER','STORM','EMBER','FROST','RAVEN','CEDAR','OASIS',
+                 'BLADE','CROWN','FLAME','GHOST','HONOR','IRON','JOUST','KINGS','LANCE','MIGHT'];
+  // Add random suffix to avoid collisions
+  return words[Math.floor(Math.random() * words.length)] + Math.floor(Math.random() * 900 + 100);
+}
+
+// ═══════════════════════════════════════════
+// PARTYKIT REAL-TIME CONNECTION
+// ═══════════════════════════════════════════
+// IMPORTANT: replace with your own PartyKit project name after deploying server.js
+// e.g. if you deployed as "cabo-game" your username, set:
+// const PARTYKIT_HOST = "cabo-server-production.up.railway.app";
+const PARTYKIT_HOST = "cabo-server-production.up.railway.app";
+
+let socket = null;
+
+function setConnectionStatus(msg, color) {
+  const el = document.getElementById('connectionStatus');
+  if (el) { el.textContent = msg; el.style.color = color || 'var(--gold-dark)'; }
+}
+
+function connectToRoom(code, onOpenExtra) {
+  if (socket) { socket.close(); socket = null; }
+  const url = `wss://${PARTYKIT_HOST}/parties/main/${code.toLowerCase()}`;
+  socket = new WebSocket(url);
+
+  socket.addEventListener('open', () => {
+    setConnectionStatus('⚡ Connected — real-time active', '#6abf70');
+    // Announce ourselves so server registers us
+    socket.send(JSON.stringify({ type: 'hello', playerId: myId }));
+    // If a caller wants to send something right on open (e.g. join), do it now
+    if (onOpenExtra) onOpenExtra();
+  });
+
+  socket.addEventListener('message', (evt) => {
+    try {
+      const msg = JSON.parse(evt.data);
+      if (msg.type === 'state') {
+        const gs = msg.state;
+        gameState = gs;
+        if (gs.phase === 'lobby') {
+          renderWaiting(gs);
+        } else {
+          if (document.getElementById('waitingScreen').classList.contains('active')) showScreen('gameScreen');
+          renderGame(gs);
+        }
+      } else if (msg.type === 'join_queued') {
+        // Server didn't have state yet — retry join after a short delay
+        setTimeout(() => {
+          sendToServer({ type: 'join', playerId: myId, playerName: myName });
+        }, 800);
+      } else if (msg.type === 'error') {
+        showToast(msg.message || 'Server error');
+      }
+    } catch(e) {}
+  });
+
+  socket.addEventListener('close', () => {
+    setConnectionStatus('⚠ Disconnected — reconnecting…', '#f97316');
+    // Auto-reconnect after 2s; non-hosts re-send their join on reconnect
+    setTimeout(() => {
+      if (!roomCode) return;
+      if (!isHost && myId && myName) {
+        connectToRoom(roomCode, () => {
+          sendToServer({ type: 'join', playerId: myId, playerName: myName });
+        });
+      } else {
+        connectToRoom(roomCode);
+      }
+    }, 2000);
+  });
+
+  socket.addEventListener('error', () => {
+    setConnectionStatus('✗ Connection error', 'var(--crimson)');
+  });
+}
+
+function sendToServer(msg) {
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify(msg));
+  }
+}
+
+// mutate: apply fn to current state, send result to PartyKit server which broadcasts to all
+async function mutate(fn) {
+  // Work on a deep copy of current state
+  const gs = JSON.parse(JSON.stringify(gameState || {}));
+  fn(gs);
+  gameState = gs;
+  renderGame(gs);
+  sendToServer({ type: 'setState', state: gs });
+}
+
+function copyRoomCode() {
+  const code = document.getElementById('displayCode').textContent;
+  navigator.clipboard.writeText(code).then(() => showToast('Room code copied!')).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = code;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('Room code copied!');
+  });
+}
+
+// ═══════════════════════════════════════════
+// LOBBY ACTIONS
+// ═══════════════════════════════════════════
+async function hostGame() {
+  const name = document.getElementById('playerName').value.trim();
+  if (!name) { showToast('Enter your name first'); return; }
+  myName = name;
+  myId = genId();
+  isHost = true;
+  roomCode = genRoomCode();
+
+  const gs = {
+    players: [{ id: myId, name: myName }],
+    phase: 'lobby',
+    round: 0,
+    scores: {},
+    deck: [],
+    hands: {},
+    discard: [],
+    currentTurn: null,
+    cabo: null,
+    drawnCard: null,
+    drawnFrom: '',
+    knownCards: {},
+    initialPeekDone: {},
+    fire: null,
+    swapHalos: [],
+    roundScores: null,
+    gameOver: false,
+    winner: null,
+    lastAction: ''
+  };
+
+  gameState = gs;
+  document.getElementById('displayCode').textContent = roomCode;
+  const shareEl = document.getElementById('shareInfo');
+  if (shareEl) shareEl.textContent = '🌐 Real-time — friends can join from any device!';
+  // Push state immediately when socket opens — no blind setTimeout
+  connectToRoom(roomCode, () => {
+    sendToServer({ type: 'setState', state: gs });
+  });
+
+  renderWaiting(gs);
+  showScreen('waitingScreen');
+}
+
+async function joinGame() {
+  const name = document.getElementById('playerName').value.trim();
+  const code = document.getElementById('roomCodeInput').value.trim().toUpperCase();
+  if (!name) { showToast('Enter your name first'); return; }
+  if (!code) { showToast('Enter a room code'); return; }
+  myName = name;
+  myId = genId();
+  isHost = false;
+  roomCode = code;
+
+  document.getElementById('displayCode').textContent = roomCode;
+  const shareEl = document.getElementById('shareInfo');
+  if (shareEl) shareEl.textContent = '🌐 Real-time mode';
+
+  // Pass the join message to be sent immediately on socket open
+  connectToRoom(roomCode, () => {
+    sendToServer({ type: 'join', playerId: myId, playerName: myName });
+  });
+  showScreen('waitingScreen');
+}
+
+// ═══════════════════════════════════════════
+// START GAME
+// ═══════════════════════════════════════════
+async function startGame() {
+  const gs = gameState;
+  if (!gs || gs.players.length < 2) { showToast('Need at least 2 players'); return; }
+  const state = initGameState(gs.players);
+  state.round = 1;
+  state.scores = Object.fromEntries(gs.players.map(p => [p.id, 0]));
+  gameState = state;
+  sendToServer({ type: 'setState', state });
+  showScreen('gameScreen');
+  renderGame(state);
+  // Deal animation only on the very first game start
+  requestAnimationFrame(() => requestAnimationFrame(() => playDealAnimation(state)));
+}
+
+// ═══════════════════════════════════════════
+// GAME STATE INIT
+// ═══════════════════════════════════════════
+function makeDeck() {
+  const suits = ['spade','heart','diamond','club'];
+  const values = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+  const deck = [];
+  for (let s of suits) for (let v of values) deck.push({ suit: s, value: v });
+  deck.push({ suit: 'joker_red', value: 'JK' }, { suit: 'joker_black', value: 'JK' });
+  // Shuffle
+  for (let i = deck.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+  return deck;
+}
+
+function initGameState(players) {
+  const deck = makeDeck();
+  const hands = {};
+  let deckCopy = [...deck];
+  for (let p of players) {
+    hands[p.id] = [deckCopy.pop(), deckCopy.pop(), deckCopy.pop(), deckCopy.pop()];
+  }
+  const startingPlayerIndex = Math.floor(Math.random() * players.length);
+  return {
+    players,
+    phase: 'draw',
+    round: 1,
+    scores: Object.fromEntries(players.map(p => [p.id, 0])),
+    deck: deckCopy,
+    hands,
+    discard: [],
+    currentTurn: players[startingPlayerIndex].id,
+    cabo: null,
+    caboLastRound: false,
+    drawnCard: null,
+    drawnFrom: '',
+    knownCards: createInitialKnowledge(players),
+    initialPeekDone: createInitialPeekState(players),
+    fire: null,
+    swapHalos: [],
+    roundScores: null,
+    gameOver: false,
+    winner: null,
+    lastAction: 'Game started!'
+  };
+}
+
+function cardPoints(card) {
+  if (!card) return 0;
+  if (card.value === 'JK') return -1;
+  if (card.value === 'K') return card.suit === 'spade' || card.suit === 'club' ? 0 : 13;
+  const face = { A: 1, J: 11, Q: 12 };
+  return face[card.value] ?? parseInt(card.value);
+}
+
+function cardAbility(value) {
+  const map = {
+    '7':'peek_own', '8':'peek_own',  // peek one of your own cards
+    '9':'spy',      '10':'spy',      // peek an opponent's card
+    'J':'blind_swap',                // swap with opponent, no peeking
+    'Q':'swap_peek',                 // swap with opponent, then peek the card you received
+    'K':'peek_swap',                 // peek an opponent's card, then optionally swap
+  };
+  return map[value] || null;
+}
+
+function cardLabel(card) {
+  if (!card) return '?';
+  const suitSymbol = { heart:'♥', diamond:'♦', club:'♣', spade:'♠', joker_red:'🃏', joker_black:'🃟' };
+  return `${card.value}${suitSymbol[card.suit] || card.suit}`;
+}
+
+// Add a card to a hand respecting fixed slot positions:
+// fills the first null slot if one exists, otherwise appends a new slot.
+function addCardToHand(hand, card) {
+  const emptySlot = hand.indexOf(null);
+  if (emptySlot !== -1) {
+    hand[emptySlot] = card;
+  } else {
+    hand.push(card);
+  }
+}
+
+// ═══════════════════════════════════════════
+// KNOWLEDGE
+// ═══════════════════════════════════════════
+function cardKey(ownerId, index) { return ownerId + ':' + index; }
+function createInitialKnowledge(players) {
+  const knownCards = {};
+  for (let p of players) {
+    // Start with empty knowledge — cards 2 & 3 are shown via the initial peek window only,
+    // NOT pre-marked as known. Once Begin is pressed they flip face-down permanently.
+    knownCards[p.id] = {};
+  }
+  return knownCards;
+}
+function ensureKnowledge(gs) {
+  if (!gs.knownCards) gs.knownCards = createInitialKnowledge(gs.players);
+  for (let p of gs.players) if (!gs.knownCards[p.id]) gs.knownCards[p.id] = {};
+}
+function markKnown(gs, viewerId, ownerId, index) {
+  ensureKnowledge(gs);
+  gs.knownCards[viewerId][cardKey(ownerId, index)] = true;
+}
+function isKnownTo(viewerId, ownerId, index) {
+  if (!gameState) return false;
+  ensureKnowledge(gameState);
+  return !!gameState.knownCards?.[viewerId]?.[cardKey(ownerId, index)];
+}
+function forgetMissingCards(gs) {
+  ensureKnowledge(gs);
+  for (let viewerId of Object.keys(gs.knownCards)) {
+    for (let key of Object.keys(gs.knownCards[viewerId])) {
+      const [ownerId, rawIndex] = key.split(':');
+      const index = Number(rawIndex);
+      if (!gs.hands[ownerId] || !gs.hands[ownerId][index]) delete gs.knownCards[viewerId][key];
+    }
+  }
+}
+function createInitialPeekState(players) {
+  return Object.fromEntries(players.map(p => [p.id, false]));
+}
+function ensureInitialPeekState(gs) {
+  if (!gs.initialPeekDone) gs.initialPeekDone = createInitialPeekState(gs.players);
+  for (let p of gs.players) if (gs.initialPeekDone[p.id] === undefined) gs.initialPeekDone[p.id] = false;
+}
+function isInitialRevealVisible(gs, playerId) {
+  ensureInitialPeekState(gs);
+  return gs.phase !== 'end' && !gs.initialPeekDone[playerId];
+}
+function isRed(card) {
+  return card?.suit === 'heart' || card?.suit === 'diamond' || card?.suit === 'joker_red';
+}
+
+// ═══════════════════════════════════════════
+// CARD RENDERING (no external SVG sprite)
+// ═══════════════════════════════════════════
+function renderCardHtml(card, faceUp, extraClass, id, onclick = '') {
+  const classes = `card ${faceUp ? 'face-up' : 'face-down'} ${faceUp && isRed(card) ? 'red-suit' : ''} ${extraClass || ''}`;
+  const clickAttr = onclick ? `onclick="${onclick}"` : '';
+  const cursor = onclick ? 'pointer' : 'default';
+  const label = faceUp ? cardLabel(card) : 'Card back';
+
+  if (!faceUp) {
+    // GoT card back
+    return `<div class="${classes}" id="${id}" ${clickAttr} style="cursor:${cursor}" aria-label="${escHtml(label)}">${cardBackSVG()}</div>`;
+  }
+
+  // Face-up card
+  const suitSymbol = { heart:'♥', diamond:'♦', club:'♣', spade:'♠', joker_red:'🃏', joker_black:'🃟' }[card?.suit] || '?';
+  const val = card?.value || '?';
+  const isFaceCard = ['J','Q','K'].includes(val);
+  const isJoker = val === 'JK';
+
+  let innerHtml = '';
+
+  if (isFaceCard && !isJoker) {
+    innerHtml = `
+      <div class="card-face-art">${faceCardArt(val, card.suit)}</div>
+      <div class="card-corner"><div class="card-value">${val}</div><div class="card-suit">${suitSymbol}</div></div>
+      <div class="card-corner-br"><div class="card-value">${val}</div><div class="card-suit">${suitSymbol}</div></div>
+    `;
+  } else if (isJoker) {
+    innerHtml = `
+      <div class="card-corner"><div class="card-value">JK</div></div>
+      <div class="card-corner-br"><div class="card-value">JK</div></div>
+      <div class="card-value" style="font-size:28px">🃏</div>
+    `;
+  } else {
+    innerHtml = `
+      <div class="card-corner"><div class="card-value">${val}</div><div class="card-suit">${suitSymbol}</div></div>
+      <div class="card-corner-br"><div class="card-value">${val}</div><div class="card-suit">${suitSymbol}</div></div>
+      <div class="card-value">${val}</div>
+      <div class="card-suit">${suitSymbol}</div>
+    `;
+  }
+
+  return `<div class="${classes}" id="${id}" ${clickAttr} style="cursor:${cursor}" aria-label="${escHtml(label)}">${innerHtml}</div>`;
+}
+
+// ═══════════════════════════════════════════
+// RENDER WAITING
+// ═══════════════════════════════════════════
+function renderWaiting(gs) {
+  const list = document.getElementById('waitingPlayerList');
+  list.innerHTML = gs.players.map((p, i) => `
+    <li>
+      <span class="player-dot ${i === 0 ? 'host' : ''}"></span>
+      ${escHtml(p.name)}
+      ${i === 0 ? '<span class="badge">Host</span>' : ''}
+      ${p.id === myId ? '<span class="badge" style="background:rgba(42,92,48,0.3);color:#6abf70">You</span>' : ''}
+    </li>`).join('');
+  const startBtn = document.getElementById('startBtn');
+  const waitNote = document.getElementById('waitNote');
+  if (isHost) {
+    startBtn.disabled = gs.players.length < 2;
+    waitNote.textContent = gs.players.length < 2 ? 'Awaiting more players...' : 'Ready to begin!';
+  } else {
+    startBtn.disabled = true;
+    startBtn.textContent = 'Waiting for host...';
+    waitNote.textContent = `${gs.players.length}/6 player(s) in room`;
+  }
+}
+
+// ═══════════════════════════════════════════
+// RENDER GAME
+// ═══════════════════════════════════════════
+function renderGame(gs) {
+  if (!gs || !gs.players) return;
+  if (gs.phase === 'lobby') { renderWaiting(gs); return; }
+  if (!document.getElementById('gameScreen').classList.contains('active')) showScreen('gameScreen');
+
+  const isMyTurn = gs.currentTurn === myId;
+  const myHand = gs.hands[myId] || [];
+  const dc = gs.drawnCard;
+
+  // Header
+  document.getElementById('roundLabel').textContent = `Round ${gs.round}`;
+  const statusEl = document.getElementById('turnStatus');
+  const isDone = gs.phase === 'done';
+  if (isDone && isMyTurn) {
+    statusEl.textContent = 'End Turn';
+    statusEl.className = 'status-pill your-turn';
+  } else if (isDone) {
+    statusEl.textContent = (gs.players.find(p => p.id === gs.currentTurn)?.name || '?') + ' — Ending Turn';
+    statusEl.className = 'status-pill waiting';
+  } else {
+    statusEl.textContent = isMyTurn ? 'Your Turn' : (gs.players.find(p => p.id === gs.currentTurn)?.name || '?') + "'s Turn";
+    statusEl.className = 'status-pill ' + (isMyTurn ? 'your-turn' : 'waiting');
+  }
+
+  // Viewer mode button — host-only debug tool
+  const viewerBtn = document.getElementById('viewerModeBtn');
+  if (viewerBtn) viewerBtn.style.display = isHost ? '' : 'none';
+
+  // Opponents — rendered with POV perspective, distributed around a circular table
+  // Slot assignment by opponent count:
+  //   1 opp  → top: [0]
+  //   2 opps → top: [0,1]
+  //   3 opps → top: [1], left: [0], right: [2]
+  //   4 opps → top: [1,2], left: [0], right: [3]
+  //   5 opps → top: [1,2,3], left: [0], right: [4]
+  const opponents = gs.players.filter(p => p.id !== myId);
+  const oppCount = opponents.length;
+  let topSlot, leftSlot, rightSlot;
+  if (oppCount <= 2) {
+    topSlot = opponents; leftSlot = []; rightSlot = [];
+  } else {
+    leftSlot  = [opponents[0]];
+    rightSlot = [opponents[oppCount - 1]];
+    topSlot   = opponents.slice(1, oppCount - 1);
+  }
+
+  const renderOppZone = (p) => {
+    const hand = gs.hands[p.id] || [];
+    const isTurn = gs.currentTurn === p.id;
+
+    // POV: indices 2,3 are the opponent's initially-known cards (near to THEM, far from viewer)
+    // They appear at the TOP of the opponent zone — furthest from the viewer across the table.
+    // Indices 0,1 are near the viewer (bottom of the opponent zone).
+    const renderOppCard = (c, i, nearClass = '') => {
+      // Null slot — render a ghost empty placeholder to preserve position
+      if (c === null) {
+        return `<div class="card small face-down${nearClass}" id="opp_${p.id}_${i}" style="opacity:0.18;cursor:default;pointer-events:none">${cardBackSVG()}</div>`;
+      }
+      const isPeeking = !!(tempPeekCard && tempPeekCard.ownerId === p.id && tempPeekCard.index === i);
+      const known = viewerMode || isPeeking || isKnownTo(myId, p.id, i);
+      const selected = fireSelection.some(s => s.ownerId === p.id && s.index === i);
+      // Starter AND current responder can fire-select opponent cards
+      const isFireStarter = gs.phase === 'fire' && gs.fire && gs.fire.starterId === myId && !gs.fire.burnedValue;
+      const isFireResponder = gs.phase === 'fire' && gs.fire && gs.fire.burnedValue && gs.fire.queue?.[0] === myId;
+      const canFireSelectOpp = isFireStarter || isFireResponder;
+      const fireSelClass = canFireSelectOpp ? ' fire-selectable' : '';
+      const fireSel = selected ? ' fire-selected' : '';
+      let click = '';
+      if (canFireSelectOpp) click = `toggleFireCard('${p.id}',${i})`;
+      else if (gs.phase === 'ability' && abilityTarget) {
+        const at = abilityTarget.type;
+        if (at === 'spy')            click = `spyCard('${p.id}',${i})`;
+        else if (at === 'blind_swap')     click = `abilityPickOpp('${p.id}',${i})`;
+        else if (at === 'swap_peek')      click = `abilityPickOpp('${p.id}',${i})`;
+        else if (at === 'peek_swap')      click = `peekSwapOpp('${p.id}',${i})`;
+      }
+      const isHalo = (gs.swapHalos || []).some(h => h.ownerId === p.id && h.index === i);
+      const haloClass = isHalo ? ' just-swapped' : '';
+      const badge = isHalo ? '<span class="swap-badge">NEW</span>' : '';
+      const cardHtml = renderCardHtml(known ? c : null, known, `small${nearClass}${fireSelClass}${fireSel}${haloClass}`, `opp_${p.id}_${i}`, click);
+      return isHalo ? `<div style="position:relative;display:inline-block">${badge}${cardHtml}</div>` : cardHtml;
+    };
+
+    // POV layout: slots 0,1 are near the viewer (bottom row), slots 2+ are near the opponent (top row).
+    // Sparse arrays: null slots render as ghost placeholders to preserve the player's mental map.
+    // We always split at index 2: slots 0..1 → bottom, slots 2..end → top.
+    const slotCount = hand.length; // may include trailing nulls
+    let topCards = [], bottomCards = [];
+    for (let i = 0; i < slotCount; i++) {
+      if (i < 2) {
+        bottomCards.push(renderOppCard(hand[i], i, ' near-card'));
+      } else {
+        topCards.push(renderOppCard(hand[i], i));
+      }
+    }
+
+    return `<div class="opponent-zone">
+      <div class="opponent-name">${isTurn ? '<span class="turn-indicator"></span>' : ''}${escHtml(p.name)}</div>
+      ${topCards.length ? `<div class="opponent-hand" style="margin-bottom:5px;opacity:0.75">${topCards.join('')}</div>` : ''}
+      <div class="opponent-hand">${(bottomCards.length ? bottomCards : topCards).join('')}</div>
+      ${topCards.length && bottomCards.length ? `<div class="pov-label">← near you →</div>` : ''}
+    </div>`;
+  };
+
+  document.getElementById('topOpponents').innerHTML = topSlot.map(renderOppZone).join('');
+  document.getElementById('sideLeft').innerHTML     = leftSlot.map(renderOppZone).join('');
+  document.getElementById('sideRight').innerHTML    = rightSlot.map(renderOppZone).join('');
+
+  // Deck card (always show back)
+  const deckEl = document.getElementById('deckCard');
+  if (deckEl) deckEl.innerHTML = cardBackSVG();
+
+  // Discard — show card back when empty, face-up top card when pile has cards
+  const topDiscard = gs.discard?.[gs.discard.length - 1] || null;
+  const discardEl = document.getElementById('discardCard');
+  if (discardEl) {
+    if (topDiscard) {
+      discardEl.outerHTML = renderCardHtml(topDiscard, true, '', 'discardCard', 'drawFromDiscard()');
+    } else {
+      // Empty pile: show card back graphic (no click)
+      const emptyEl = document.createElement('div');
+      emptyEl.id = 'discardCard';
+      emptyEl.className = 'card face-down';
+      emptyEl.style.opacity = '0.4';
+      emptyEl.title = 'Discard pile (empty)';
+      emptyEl.innerHTML = cardBackSVG();
+      discardEl.replaceWith(emptyEl);
+    }
+  }
+
+  // Deck count
+  const deckCount = document.getElementById('deckCount');
+  if (deckCount) deckCount.textContent = `${gs.deck?.length || 0} cards`;
+
+  // My hand — indices 2,3 are my "near" (initially seen) cards shown at bottom
+  const myHandEl = document.getElementById('myHand');
+  if (myHandEl) {
+    // Fire: cards are selectable only when I'm the starter (pre-burn) or current responder
+    const myFireTurn = gs.phase === 'fire' && gs.fire && (
+      (gs.fire.starterId === myId && !gs.fire.burnedValue) ||  // starter picking initial cards
+      (gs.fire.queue?.[0] === myId)  // my turn to respond
+    );
+    const renderMyCard = (c, i) => {
+      // Null slot — render a ghost empty placeholder to preserve position
+      if (c === null) {
+        return `<div class="card face-down" id="my_${i}" style="opacity:0.18;cursor:default;pointer-events:none">${cardBackSVG()}</div>`;
+      }
+      const isPeekingOwn = !!(tempPeekCard && tempPeekCard.ownerId === myId && tempPeekCard.index === i);
+      // During initial peek (before Begin), show bottom 2 cards face-up.
+      // After Begin is pressed, all cards go face-down — players must rely on memory.
+      const initialPeek = isInitialRevealVisible(gs, myId) && i >= 2;
+      const known = viewerMode || isPeekingOwn || isKnownTo(myId, myId, i) || initialPeek;
+      const sel = selectedHandIndex === i ? ' selected' : '';
+      const fireClass = myFireTurn ? ' fire-selectable' : '';
+      const fireSel = fireSelection.some(s => s.ownerId === myId && s.index === i) ? ' fire-selected' : '';
+      let click = '';
+      if (myFireTurn) click = `toggleFireCard('${myId}',${i})`;
+      else if (gs.phase === 'action') click = `selectHandCard(${i})`;
+      else if (gs.phase === 'ability' && abilityTarget) {
+        const at = abilityTarget.type;
+        if (at === 'peek_own')           click = `peekOwnCard(${i})`;
+        else if (at === 'blind_swap_own')  click = `abilitySwapCommit(${i})`;
+        else if (at === 'swap_peek_own')   click = `abilitySwapCommit(${i})`;
+        else if (at === 'peek_swap_decide') click = `peekSwapCommit(${i})`;
+      }
+      const isHalo = (gs.swapHalos || []).some(h => h.ownerId === myId && h.index === i);
+      const haloClass = isHalo ? ' just-swapped' : '';
+      const badge = isHalo ? '<span class="swap-badge">NEW</span>' : '';
+      const cardHtml = renderCardHtml(known ? c : null, known, sel + fireClass + fireSel + haloClass, `my_${i}`, click);
+      return isHalo ? `<div style="position:relative;display:inline-block">${badge}${cardHtml}</div>` : cardHtml;
+    };
+    // Layout: render all slots in a fixed 2-column grid.
+    // Slots 0,1 = row 1 (far from player, shown dimmed); slots 2,3 = row 2 (near player, shown at full opacity).
+    // Extra slots (penalty cards at index 4+) form additional rows.
+    // Null slots are rendered as ghost placeholders — positions are never compacted.
+    const totalSlots = myHand.length;
+    // Build rows of 2 from all slots
+    const rows = [];
+    for (let i = 0; i < totalSlots; i += 2) {
+      rows.push([i, Math.min(i + 1, totalSlots - 1) < totalSlots ? i + 1 : null]);
+    }
+    // Ensure at least 2 rows (4 slots)
+    while (rows.length < 2) rows.push([rows.length * 2, rows.length * 2 + 1]);
+
+    const numRows = rows.length;
+    let gridHtml = '';
+    for (let r = 0; r < numRows; r++) {
+      const [idxA, idxB] = rows[r];
+      const cardA = idxA !== null ? (myHand[idxA] ?? null) : null;
+      const cardB = idxB !== null ? (myHand[idxB] ?? null) : null;
+      const isTopRow = r === 0 && numRows > 1; // far-from-player row, slightly dimmed
+      const isPenaltyRow = r >= 2; // rows beyond the standard 4 slots
+      const opacity = isTopRow ? 'opacity:0.85' : '';
+      const penaltyLabel = isPenaltyRow && r === 2
+        ? `<div style="grid-column:1/-1;font-size:10px;color:rgba(249,115,22,0.7);font-family:'Cinzel',serif;letter-spacing:0.08em;margin-top:-2px;margin-bottom:-4px">⚠ penalty cards</div>`
+        : '';
+      gridHtml += `${penaltyLabel}<div style="display:contents;${opacity}">`;
+      gridHtml += idxA !== null ? renderMyCard(cardA, idxA) : `<div style="width:72px;height:108px"></div>`;
+      gridHtml += idxB !== null ? renderMyCard(cardB, idxB) : `<div style="width:72px;height:108px"></div>`;
+      gridHtml += `</div>`;
+    }
+
+    myHandEl.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(2,max-content);gap:8px;justify-content:center;align-items:end">
+        ${gridHtml}
+      </div>
+      ${numRows > 1 ? `<div class="pov-label" style="color:rgba(201,168,76,0.6)">${isInitialRevealVisible(gs, myId) ? '← memorize your bottom 2 cards →' : '← your cards (face-down) →'}</div>` : ''}
+    `;
+  }
+
+  // My name + score
+  document.getElementById('myNameLabel').textContent = myName || 'You';
+  document.getElementById('myScoreLabel').textContent = `Score: ${gs.scores?.[myId] ?? 0}`;
+
+  // Actions
+  renderActions(gs, isMyTurn, myHand);
+
+  // Log
+  if (gs.lastAction) addLog(gs.lastAction);
+
+  // Score overlay
+  if (gs.phase === 'end') showScoreOverlay(gs);
+
+  renderDebugState(gs);
+}
+
+// ═══════════════════════════════════════════
+// ACTIONS
+// ═══════════════════════════════════════════
+function renderActions(gs, isMyTurn, myHand) {
+  const msg = document.getElementById('actionMsg');
+  const btns = document.getElementById('actionBtns');
+  btns.innerHTML = '';
+  if (gs.gameOver) { msg.textContent = 'Game over!'; return; }
+
+
+  // ── BURN WINDOW PHASE ──
+  if (gs.phase === 'burn_window' && gs.burnWindow) {
+    // Use a local client-side deadline so server clock skew doesn't matter.
+    // Reset deadline whenever forPlayer changes (i.e. new turn started).
+    if (window._burnWindowForPlayer !== gs.burnWindow.forPlayer) {
+      window._burnWindowForPlayer = gs.burnWindow.forPlayer;
+      window._burnWindowDeadline = Date.now() + (gs.burnWindow.durationMs || 5000);
+      if (window._burnWindowTimer) { clearInterval(window._burnWindowTimer); window._burnWindowTimer = null; }
+    }
+    if (!window._burnWindowTimer) {
+      window._burnWindowTimer = setInterval(() => {
+        if (!gameState || gameState.phase !== 'burn_window') {
+          clearInterval(window._burnWindowTimer); window._burnWindowTimer = null; return;
+        }
+        if (Date.now() >= window._burnWindowDeadline) {
+          clearInterval(window._burnWindowTimer); window._burnWindowTimer = null;
+          closeBurnWindow();
+        } else {
+          renderGame(gameState);
+        }
+      }, 250);
+    }
+    const bw = gs.burnWindow;
+    const activePlayer = gs.players.find(p => p.id === bw.forPlayer)?.name || '?';
+    const timeLeft = Math.max(0, Math.ceil((window._burnWindowDeadline - Date.now()) / 1000));
+    msg.innerHTML = `<div class="fire-banner">
+      <div class="fire-banner-title">🔥 Fire Window — ${timeLeft}s</div>
+      <div class="fire-banner-sub"><strong>${activePlayer}</strong>'s turn is about to begin.<br>Anyone can start a fire right now!</div>
+    </div>`;
+    btns.innerHTML = `<button class="btn btn-danger" style="animation:pulse 0.8s infinite alternate" onclick="startFire()">🔥 Start Fire!</button>`;
+    return;
+  } else if (window._burnWindowTimer) {
+    clearInterval(window._burnWindowTimer); window._burnWindowTimer = null;
+    window._burnWindowDeadline = null; window._burnWindowForPlayer = null;
+  }
+
+  // ── FIRE PHASE ──
+  if (gs.phase === 'fire' && gs.fire) {
+    const fire = gs.fire;
+    const starter = gs.players.find(p => p.id === fire.starterId)?.name || 'Someone';
+    const amStarter = fire.starterId === myId;
+    const nextResponder = fire.queue?.[0];
+    const amResponder = nextResponder === myId;
+
+    if (amStarter && !fire.burnedValue) {
+      // Starter picks 2+ cards from any player (including self) to start the fire
+      const selCount = fireSelection.length;
+      msg.innerHTML = `<div class="fire-banner">
+        <div class="fire-banner-title">🔥 You started a Fire!</div>
+        <div class="fire-banner-sub">Select 2 or more cards from <strong>any player</strong> (including yourself). Cards must share the same value — or you draw 2 penalty cards!<br><br>Opponents' chosen cards will be replaced by cards from your hand.<br><span style="color:#fbbf24">${selCount} card(s) selected</span></div>
+      </div>`;
+      btns.innerHTML = `<button class="btn btn-danger" onclick="burnFireSelection()">Burn Selected Cards</button>`;
+      return;
+    }
+
+    if (amStarter && fire.burnedValue) {
+      // Starter already burned, waiting for others to respond
+      const remaining = fire.queue?.length || 0;
+      const penaltyNote = fire.starterPenalty ? ` <span style="color:#f97316">(You drew 2 penalty cards for mismatched values!)</span>` : '';
+      msg.innerHTML = `<div class="fire-banner"><div class="fire-banner-title">🔥 Fire is spreading!</div><div class="fire-banner-sub">You burned the ${fire.burnedValue}s.${penaltyNote} Waiting for ${remaining} player(s) to respond...</div></div>`;
+      return;
+    }
+
+    if (amResponder) {
+      // It's this player's turn to respond to the fire
+      const burnedVal = fire.burnedValue;
+      const selCount = fireSelection.length;
+      msg.innerHTML = `<div class="fire-banner">
+        <div class="fire-banner-title">🔥 ${starter} burned ${burnedVal}s!</div>
+        <div class="fire-banner-sub">
+          <strong>Option 1:</strong> Select 1+ cards matching <strong>${burnedVal}</strong> (from any player) — no penalty, burned cleanly.<br>
+          <strong>Option 2:</strong> Select 2+ cards all sharing <em>any</em> same value — starts a new fire with that value. Opponent cards replaced by your remaining cards.<br>
+          <strong>Mismatch:</strong> Cards stay, you draw 2 penalty cards.<br>
+          <span style="color:#fbbf24">${selCount} card(s) selected</span>
+        </div>
+      </div>`;
+      btns.innerHTML = `<button class="btn btn-danger" onclick="burnFireSelection()">Burn Selected</button><button class="btn btn-secondary" onclick="passFireResponse()">Pass</button>`;
+      return;
+    }
+
+    // Observer — not the starter, not the current responder
+    const currentResponderName = gs.players.find(p => p.id === nextResponder)?.name || '...';
+    msg.innerHTML = `<div class="fire-banner"><div class="fire-banner-title">🔥 Fire in progress</div><div class="fire-banner-sub">${starter} burned ${fire.burnedValue || '...'}s. Waiting for ${currentResponderName}...</div></div>`;
+    return;
+  }
+
+
+  if (isInitialRevealVisible(gs, myId)) {
+    msg.textContent = 'Memorize your bottom 2 cards, then begin.';
+    btns.innerHTML += `<button class="btn btn-primary" onclick="beginRoundView()">Begin</button>`;
+    return;
+  }
+  if (!isMyTurn) { msg.textContent = 'Wait for your turn...'; return; }
+
+  if (gs.phase === 'draw') {
+    msg.textContent = 'Draw a card from the deck or take the top discard.';
+  } else if (gs.phase === 'action') {
+    const preview = `<div class="drawn-card-preview">${renderCardHtml(gs.drawnCard, true, '', 'drawnPreview')}</div>`;
+    if (gs.drawnFrom === 'discard') {
+      msg.innerHTML = `${preview}<div>${cardLabel(gs.drawnCard)} taken. Select one of your cards to swap.</div>`;
+    } else {
+      const ability = cardAbility(gs.drawnCard?.value);
+      const abilityLabels = {
+        peek_own: 'Peek Own (7/8)', spy: 'Peek Opponent (9/10)',
+        blind_swap: 'Blind Swap (J)', swap_peek: 'Swap & Peek (Q)', peek_swap: 'Peek & Swap (K)'
+      };
+      const abilityLabel = abilityLabels[ability] || 'Use Ability';
+      msg.innerHTML = `${preview}<div>You drew ${cardLabel(gs.drawnCard)}. Swap with your card, use its ability, or discard.</div>`;
+      if (ability) btns.innerHTML += `<button class="btn btn-info" onclick="useDrawnAbility()">${abilityLabel}</button>`;
+      btns.innerHTML += `<button class="btn btn-secondary" onclick="discardDrawn()">Discard Drawn</button>`;
+    }
+  } else if (gs.phase === 'ability') {
+    const preview = gs.drawnCard ? `<div class="drawn-card-preview">${renderCardHtml(gs.drawnCard, true, '', 'abilityPreview')}</div>` : '';
+    const ability = cardAbility(gs.drawnCard?.value);
+
+    if (ability === 'peek_own') {
+      // 7 / 8: peek one of your own cards
+      msg.innerHTML = `${preview}<div>Select one of <strong>your</strong> cards to peek at.</div>`;
+      abilityTarget = { type: 'peek_own' };
+
+    } else if (ability === 'spy') {
+      // 9 / 10: peek an opponent's card
+      msg.innerHTML = `${preview}<div>Select an <strong>opponent's</strong> card to peek at.</div>`;
+      abilityTarget = { type: 'spy' };
+
+    } else if (ability === 'blind_swap') {
+      // J: pick opponent card → pick your card → swap, no reveal
+      if (!abilityTarget || abilityTarget.type === 'blind_swap') {
+        msg.innerHTML = `${preview}<div>⚔️ <strong>Blind Swap (J):</strong> Select an opponent's card to swap.</div>`;
+        abilityTarget = { type: 'blind_swap' };
+      } else if (abilityTarget.type === 'blind_swap_own') {
+        msg.innerHTML = `${preview}<div>⚔️ Now select <strong>your</strong> card to swap out.</div>`;
+      }
+
+    } else if (ability === 'swap_peek') {
+      // Q: pick opponent card → pick your card → swap → reveal what you received
+      if (!abilityTarget || abilityTarget.type === 'swap_peek') {
+        msg.innerHTML = `${preview}<div>👁 <strong>Swap & Peek (Q):</strong> Select an opponent's card to swap. You'll see what you receive.</div>`;
+        abilityTarget = { type: 'swap_peek' };
+      } else if (abilityTarget.type === 'swap_peek_own') {
+        msg.innerHTML = `${preview}<div>👁 Now select <strong>your</strong> card to swap out.</div>`;
+      }
+
+    } else if (ability === 'peek_swap') {
+      // K: peek opponent card → choose to swap or keep
+      if (!abilityTarget || abilityTarget.type === 'peek_swap') {
+        msg.innerHTML = `${preview}<div>👑 <strong>Peek & Swap (K):</strong> Select an opponent's card to look at, then decide if you want to swap.</div>`;
+        abilityTarget = { type: 'peek_swap' };
+      } else if (abilityTarget.type === 'peek_swap_decide') {
+        const peekedName = gs.players.find(p => p.id === abilityTarget.oppId)?.name || '?';
+        const peekedCard = gs.hands[abilityTarget.oppId]?.[abilityTarget.oppIndex];
+        const peekedLabel = peekedCard ? cardLabel(peekedCard) : '?';
+        msg.innerHTML = `${preview}<div>👑 You peeked at ${peekedName}'s card: <strong>${peekedLabel}</strong>. Swap it with one of your cards, or skip.</div>`;
+        btns.innerHTML = `<button class="btn btn-secondary" onclick="skipAbility()">Skip (Keep hands)</button>`;
+        return; // don't show the default skip button below
+      }
+    }
+    btns.innerHTML += `<button class="btn btn-secondary" onclick="skipAbility()">Skip Ability</button>`;
+  }
+
+  if (gs.phase === 'done' && isMyTurn) {
+    // Player completed their action — show End Turn, halos are visible to everyone
+    msg.textContent = 'Action complete. End your turn when ready.';
+    btns.innerHTML = `<button class="btn btn-end-turn btn" onclick="endTurn()">⚔ End Turn</button>`;
+    return;
+  }
+
+  if (gs.phase === 'done' && !isMyTurn) {
+    const activeName = gs.players.find(p => p.id === gs.currentTurn)?.name || '?';
+    msg.textContent = `Waiting for ${activeName} to end their turn…`;
+    return;
+  }
+
+  if (gs.phase !== 'end' && !gs.cabo && isMyTurn && gs.phase === 'draw') {
+    btns.innerHTML += `<button class="btn btn-danger" onclick="callCabo()">Call CABO</button>`;
+  }
+}
+
+// Reshuffle discard pile into deck when deck is empty.
+// Keeps the top discard card in place (it must remain visible).
+// Returns true if deck has cards after the attempt, false if nothing to reshuffle.
+function reshuffleDeckIfNeeded(gs) {
+  if (gs.deck.length > 0) return true;
+  // Need at least 2 discard cards: 1 to keep on top, 1+ to reshuffle
+  if (gs.discard.length < 2) return false;
+  const topCard = gs.discard.pop(); // preserve the visible top card
+  const toReshuffle = gs.discard.splice(0); // take all remaining discard cards
+  // Fisher-Yates shuffle
+  for (let i = toReshuffle.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [toReshuffle[i], toReshuffle[j]] = [toReshuffle[j], toReshuffle[i]];
+  }
+  gs.deck = toReshuffle;
+  gs.discard = [topCard];
+  return true;
+}
+
+async function drawFromDeck() {
+  const gs = gameState;
+  if (!gs || gs.currentTurn !== myId || gs.phase !== 'draw') return;
+  if (!gs.deck.length && gs.discard.length < 2) {
+    showToast('No cards left to draw!');
+    return;
+  }
+  await mutate(gs => {
+    const wasEmpty = gs.deck.length === 0;
+    reshuffleDeckIfNeeded(gs);
+    const card = gs.deck.pop();
+    gs.drawnCard = card;
+    gs.drawnFrom = 'deck';
+    gs.phase = 'action';
+    gs.lastAction = (wasEmpty ? '🔄 Discard reshuffled into deck. ' : '') + `${myName} drew from the deck.`;
+  });
+}
+
+async function drawFromDiscard() {
+  const gs = gameState;
+  if (!gs || gs.currentTurn !== myId || gs.phase !== 'draw') return;
+  if (!gs.discard.length) return;
+  await mutate(gs => {
+    const card = gs.discard.pop();
+    gs.drawnCard = card;
+    gs.drawnFrom = 'discard';
+    gs.phase = 'action';
+    gs.lastAction = `${myName} took from the discard pile.`;
+  });
+}
+
+async function selectHandCard(i) {
+  const gs = gameState;
+  if (!gs || gs.currentTurn !== myId) return;
+  if (gs.phase === 'action') {
+    await mutate(gs => {
+      const old = gs.hands[myId][i];
+      gs.hands[myId][i] = gs.drawnCard;
+      gs.discard.push(old);
+      gs.drawnCard = null;
+      gs.drawnFrom = '';
+      gs.phase = 'done';
+      gs.swapHalos = [{ ownerId: myId, index: i }];
+      gs.lastAction = `${myName} swapped a card.`;
+      forgetMissingCards(gs);
+    });
+    selectedHandIndex = -1;
+  }
+}
+
+async function discardDrawn() {
+  const gs = gameState;
+  if (!gs || gs.currentTurn !== myId || gs.phase !== 'action') return;
+  await mutate(gs => {
+    gs.discard.push(gs.drawnCard);
+    gs.drawnCard = null;
+    gs.drawnFrom = '';
+    gs.phase = 'done';
+    gs.swapHalos = [];
+    gs.lastAction = `${myName} discarded the drawn card.`;
+  });
+}
+
+async function useDrawnAbility() {
+  const gs = gameState;
+  if (!gs || gs.currentTurn !== myId || gs.phase !== 'action') return;
+  await mutate(gs => {
+    gs.phase = 'ability';
+    gs.lastAction = `${myName} is using an ability.`;
+  });
+}
+
+async function beginRoundView() {
+  await mutate(gs => {
+    ensureInitialPeekState(gs);
+    gs.initialPeekDone[myId] = true;
+    // Clear any pre-existing knowledge of own cards 2 & 3 so they render face-down
+    ensureKnowledge(gs);
+    delete gs.knownCards[myId][cardKey(myId, 2)];
+    delete gs.knownCards[myId][cardKey(myId, 3)];
+    gs.lastAction = `${myName} is ready.`;
+  });
+}
+
+async function spyCard(ownerId, index) {
+  if (!abilityTarget || abilityTarget.type !== 'spy') return;
+  const gs = gameState;
+  if (!gs || gs.currentTurn !== myId) return;
+  const card = gs.hands[ownerId]?.[index];
+  if (!card) return;
+  showPeek(`${gs.players.find(p=>p.id===ownerId)?.name}'s card:`, card, ownerId, index);
+  await mutate(gs => {
+    markKnown(gs, myId, ownerId, index);
+    gs.discard.push(gs.drawnCard);
+    gs.drawnCard = null;
+    gs.drawnFrom = '';
+    gs.phase = 'done';
+    gs.swapHalos = [];
+    gs.lastAction = `${myName} spied on a card.`;
+  });
+  abilityTarget = null;
+}
+
+// ─── Step 1 for J (blind_swap) and Q (swap_peek): pick the opponent's card ───
+function abilityPickOpp(oppId, oppIndex) {
+  const needsType = abilityTarget?.type;
+  if (needsType !== 'blind_swap' && needsType !== 'swap_peek') return;
+  abilityTarget.oppId    = oppId;
+  abilityTarget.oppIndex = oppIndex;
+  // Advance to "pick your own card" step
+  abilityTarget.type = needsType === 'blind_swap' ? 'blind_swap_own' : 'swap_peek_own';
+  showToast('Now select your card to swap out');
+  if (gameState) renderGame(gameState);
+}
+
+// ─── Step 2 for J and Q: pick your own card, execute swap ───
+async function abilitySwapCommit(myIndex) {
+  const needsType = abilityTarget?.type;
+  if (needsType !== 'blind_swap_own' && needsType !== 'swap_peek_own') return;
+  const { oppId, oppIndex } = abilityTarget;
+  const isSwapPeek = needsType === 'swap_peek_own';
+  const gs = gameState;
+  if (!gs || gs.currentTurn !== myId) return;
+
+  // Capture the card we'll receive before mutating, so we can show it after
+  const receivedCard = gs.hands[oppId]?.[oppIndex];
+
+  await mutate(gs => {
+    const myCard  = gs.hands[myId][myIndex];
+    const oppCard = gs.hands[oppId][oppIndex];
+    gs.hands[myId][myIndex]   = oppCard;
+    gs.hands[oppId][oppIndex] = myCard;
+    if (isSwapPeek) {
+      // Q: mark the received card as known (we peeked it), forget the given-away slot
+      markKnown(gs, myId, myId, myIndex);
+      delete gs.knownCards?.[myId]?.[cardKey(oppId, oppIndex)];
+    } else {
+      // J: blind swap — forget both swapped slots for the active player
+      delete gs.knownCards?.[myId]?.[cardKey(myId, myIndex)];   // received card (unknown)
+      delete gs.knownCards?.[myId]?.[cardKey(oppId, oppIndex)]; // given-away slot (now has our old card)
+    }
+    // Also clear any other player's stale knowledge of both swapped slots
+    for (const pid of Object.keys(gs.knownCards || {})) {
+      if (pid === myId) continue;
+      delete gs.knownCards[pid][cardKey(myId, myIndex)];
+      delete gs.knownCards[pid][cardKey(oppId, oppIndex)];
+    }
+    gs.discard.push(gs.drawnCard);
+    gs.drawnCard = null;
+    gs.drawnFrom = '';
+    gs.phase = 'done';
+    gs.swapHalos = [{ ownerId: myId, index: myIndex }, { ownerId: oppId, index: oppIndex }];
+    const oppName = gs.players.find(p => p.id === oppId)?.name || '?';
+    gs.lastAction = isSwapPeek
+      ? `${myName} swapped with ${oppName} and peeked the received card.`
+      : `${myName} blindly swapped a card with ${oppName}.`;
+  });
+
+  if (isSwapPeek && receivedCard) {
+    // Show the card the player just received
+    showPeek('You received:', receivedCard, myId, myIndex);
+  }
+  abilityTarget = null;
+}
+
+// ─── Step 1 for K: peek opponent's card, then decide ───
+async function peekSwapOpp(oppId, oppIndex) {
+  if (abilityTarget?.type !== 'peek_swap') return;
+  const gs = gameState;
+  if (!gs || gs.currentTurn !== myId) return;
+  const card = gs.hands[oppId]?.[oppIndex];
+  if (!card) return;
+
+  // Show the peeked card overlay
+  showPeek(`${gs.players.find(p=>p.id===oppId)?.name}'s card:`, card, oppId, oppIndex);
+
+  // Advance abilityTarget to the decision step
+  abilityTarget = { type: 'peek_swap_decide', oppId, oppIndex };
+  // Mark as known so it stays visible while deciding
+  await mutate(gs => { markKnown(gs, myId, oppId, oppIndex); });
+  // Re-render to show the "swap or skip" UI
+  if (gameState) renderGame(gameState);
+}
+
+// ─── Step 2 for K: commit the swap (called when player picks their own card) ───
+async function peekSwapCommit(myIndex) {
+  if (abilityTarget?.type !== 'peek_swap_decide') return;
+  const { oppId, oppIndex } = abilityTarget;
+  const gs = gameState;
+  if (!gs || gs.currentTurn !== myId) return;
+  await mutate(gs => {
+    const myCard  = gs.hands[myId][myIndex];
+    const oppCard = gs.hands[oppId][oppIndex];
+    gs.hands[myId][myIndex]   = oppCard;
+    gs.hands[oppId][oppIndex] = myCard;
+    // We already know the card we swapped in (we peeked it); mark the given-away as unknown
+    markKnown(gs, myId, myId, myIndex); // keep knowing oppCard now at myIndex
+    delete gs.knownCards?.[myId]?.[cardKey(oppId, oppIndex)]; // myCard is now there — unknown to us
+    // Clear stale knowledge of both swapped slots for all other players
+    for (const pid of Object.keys(gs.knownCards || {})) {
+      if (pid === myId) continue;
+      delete gs.knownCards[pid][cardKey(myId, myIndex)];
+      delete gs.knownCards[pid][cardKey(oppId, oppIndex)];
+    }
+    gs.discard.push(gs.drawnCard);
+    gs.drawnCard = null;
+    gs.drawnFrom = '';
+    gs.phase = 'done';
+    gs.swapHalos = [{ ownerId: myId, index: myIndex }, { ownerId: oppId, index: oppIndex }];
+    const oppName = gs.players.find(p => p.id === oppId)?.name || '?';
+    gs.lastAction = `${myName} peeked at ${oppName}'s card and swapped it.`;
+  });
+  abilityTarget = null;
+}
+
+async function peekOwnCard(i) {
+  const card = gameState.hands[myId][i];
+  showPeek('Your card:', card, myId, i);
+  await mutate(gs => {
+    // Do NOT markKnown — the peek is temporary; card flips back after overlay closes
+    gs.discard.push(gs.drawnCard);
+    gs.drawnCard = null;
+    gs.drawnFrom = '';
+    gs.phase = 'done';
+    gs.swapHalos = [];
+    gs.lastAction = `${myName} peeked at one of their cards.`;
+  });
+}
+
+async function skipAbility() {
+  await mutate(gs => {
+    gs.discard.push(gs.drawnCard);
+    gs.drawnCard = null;
+    gs.drawnFrom = '';
+    gs.phase = 'done';
+    gs.swapHalos = [];
+    // For K peek_swap_decide: forget the peeked opponent card if player chooses not to swap
+    if (abilityTarget?.type === 'peek_swap_decide') {
+      const { oppId, oppIndex } = abilityTarget;
+      if (gs.knownCards?.[myId]) delete gs.knownCards[myId][cardKey(oppId, oppIndex)];
+    }
+    gs.lastAction = `${myName} skipped the ability.`;
+  });
+  abilityTarget = null;
+}
+
+async function callCabo() {
+  await mutate(gs => {
+    gs.cabo = myId;
+    gs.caboLastRound = true;
+    gs.phase = 'done';
+    gs.swapHalos = [];
+    gs.lastAction = `⚔️ ${myName} called CABO!`;
+  });
+  showToast('You called CABO! Hit End Turn when ready.');
+}
+
+async function endTurn() {
+  const gs = gameState;
+  if (!gs || gs.currentTurn !== myId || gs.phase !== 'done') return;
+  await mutate(gs => { advanceTurn(gs); });
+}
+
+// ═══════════════════════════════════════════
+// FIRE — full multi-player response flow
+// ═══════════════════════════════════════════
+// Fire phases:
+//   gs.phase = 'fire'
+//   gs.fire = {
+//     starterId,          // who started it
+//     burnedValue,        // card value burned by starter (null until starter commits)
+//     starterCards,       // [{suit,value},...] burned by starter
+//     queue,              // [playerId,...] players still to respond (excluding starter)
+//     responses,          // { playerId: 'burned'|'passed' }
+//     done,               // true when everyone responded
+//   }
+
+async function closeBurnWindow() {
+  const gs = gameState;
+  if (!gs || gs.phase !== 'burn_window') return;
+  await mutate(gs => { gs.phase = 'draw'; gs.burnWindow = null; });
+}
+
+async function startFire() {
+  const gs = gameState;
+  if (!gs || gs.phase === 'end') return;
+  if (gs.phase === 'fire') return;
+  if (gs.phase !== 'burn_window') return;
+  fireSelection = [];
+  const queue = gs.players.filter(p => p.id !== myId).map(p => p.id);
+  await mutate(gs => {
+    gs.fire = {
+      starterId: myId,
+      burnedValue: null,
+      starterCards: [],
+      starterPenalty: false,
+      queue,
+      responses: {},
+      done: false,
+    };
+    gs.phase = 'fire';
+    gs.burnWindow = null;
+    gs.lastAction = `🔥 ${myName} started a Fire!`;
+  });
+  fireSelection = [];
+}
+
+function toggleFireCard(ownerId, index) {
+  const i = fireSelection.findIndex(s => s.ownerId === ownerId && s.index === index);
+  if (i >= 0) fireSelection.splice(i, 1);
+  else fireSelection.push({ ownerId, index });
+  renderGame(gameState);
+}
+
+// Starter commits their burn
+async function burnFireSelection() {
+  const gs = gameState;
+  if (!gs || !gs.fire) return;
+  // Use gs.fire.starterId but also cross-check with myId to avoid stale-state race conditions
+  const isStarter = gs.fire.starterId === myId;
+  const responder = gs.fire.queue?.[0];
+  // Starter can never be a responder — even if queue somehow contains myId
+  const isMyTurnToRespond = !isStarter && responder === myId && responder !== gs.fire.starterId;
+
+  if (isStarter && !gs.fire.burnedValue) {
+    // Starter must select 2+ cards from any players
+    if (fireSelection.length < 2) { showToast('Select at least 2 cards to start the fire'); return; }
+
+    // Separate own vs opponent cards
+    const myCards = fireSelection.filter(s => s.ownerId === myId);
+    const oppCards = fireSelection.filter(s => s.ownerId !== myId);
+
+    // Check: starter needs enough remaining cards to replace taken opponent cards
+    // "remaining" = own cards NOT selected
+    // No card count check needed — if starter has fewer remaining cards than opponent slots,
+    // we simply give all remaining cards to opponents and starter ends up with 0.
+
+    // Gather values of ALL selected cards
+    const vals = fireSelection.map(s => {
+      const owner = s.ownerId;
+      return gs.hands[owner]?.[s.index]?.value;
+    });
+    if (vals.some(v => !v)) { showToast('One of the selected cards is invalid.'); return; }
+
+    await mutate(gs => {
+      // --- Recompute values from fresh state inside mutate ---
+      const freshVals = fireSelection.map(s => gs.hands[s.ownerId]?.[s.index]?.value).filter(Boolean);
+      const allSameValue = freshVals.length > 0 && freshVals.every(v => v === freshVals[0]);
+      const burnedValue = freshVals[0] || vals[0]; // fallback to pre-read val
+
+      // --- MISMATCH: abort the burn entirely — cards stay, starter draws 2 penalty, fire is cancelled ---
+      if (!allSameValue) {
+        // Penalty cards always append to new slots (they are new cards, not replacements)
+        reshuffleDeckIfNeeded(gs);
+        const penalty1 = gs.deck.pop();
+        reshuffleDeckIfNeeded(gs);
+        const penalty2 = gs.deck.pop();
+        if (penalty1) addCardToHand(gs.hands[myId], penalty1);
+        if (penalty2) addCardToHand(gs.hands[myId], penalty2);
+        // Cancel fire — no cards discarded, no fire phase
+        gs.fire = null;
+        gs.phase = 'draw';
+        gs.lastAction = `🔥 ${myName} tried to burn mismatched cards — burn failed! Cards kept, drew 2 penalty cards!`;
+        return;
+      }
+
+      // --- All cards match: null the slots (preserve positions) ---
+      const byOwner = {};
+      for (const s of fireSelection) {
+        if (!byOwner[s.ownerId]) byOwner[s.ownerId] = [];
+        byOwner[s.ownerId].push(s.index);
+      }
+
+      const removedFromOpp = []; // slots taken FROM opponents
+      const removedFromSelf = []; // cards burned from starter's own hand
+
+      for (const [ownerId, indices] of Object.entries(byOwner)) {
+        for (const idx of indices) {
+          const card = gs.hands[ownerId]?.[idx];
+          if (card) {
+            if (ownerId === myId) {
+              removedFromSelf.push(card);
+            } else {
+              removedFromOpp.push({ card, ownerId, idx });
+            }
+            gs.hands[ownerId][idx] = null; // null the slot — preserve positions
+          }
+        }
+      }
+
+      // All removed cards go to discard
+      for (const card of removedFromSelf) gs.discard.push(card);
+      for (const { card } of removedFromOpp) gs.discard.push(card);
+
+      // --- Replace opponent's vacated slots with starter's remaining cards ---
+      // Pull cards from starter's non-null slots in order, place into opponent's exact vacated slots.
+      if (removedFromOpp.length > 0) {
+        const replacements = [];
+        for (let i = 0; i < gs.hands[myId].length; i++) {
+          if (gs.hands[myId][i] !== null) {
+            replacements.push(gs.hands[myId][i]);
+            gs.hands[myId][i] = null;
+          }
+        }
+        for (const { ownerId, idx } of removedFromOpp) {
+          const rep = replacements.shift();
+          if (rep) gs.hands[ownerId][idx] = rep;
+        }
+        // Any remaining starter cards go back into starter's empty slots
+        for (const card of replacements) addCardToHand(gs.hands[myId], card);
+      }
+
+      forgetMissingCards(gs);
+
+      const totalBurned = removedFromSelf.length + removedFromOpp.length;
+      gs.fire.burnedValue = burnedValue;
+      gs.fire.starterCards = [...removedFromSelf, ...removedFromOpp.map(o => o.card)];
+      gs.fire.starterPenalty = false;
+      gs.lastAction = `🔥 ${myName} burned ${totalBurned}x ${burnedValue} (including from opponents) — Fire spreads!`;
+    });
+    fireSelection = [];
+    return;
+  }
+
+  if (isMyTurnToRespond) {
+    if (fireSelection.length === 0) { showToast('Select at least 1 card to burn, or press Pass'); return; }
+
+    await mutate(gs => {
+      const fireValue = gs.fire.burnedValue;
+
+      // Read fresh values for all selected cards
+      const freshSelection = fireSelection.map(s => ({
+        ownerId: s.ownerId,
+        index: s.index,
+        value: gs.hands[s.ownerId]?.[s.index]?.value,
+      })).filter(s => s.value);
+
+      if (freshSelection.length === 0) return;
+
+      const mySelected = freshSelection.filter(s => s.ownerId === myId);
+      const oppSelected = freshSelection.filter(s => s.ownerId !== myId);
+      const allVals = freshSelection.map(s => s.value);
+      const allSameValue = allVals.every(v => v === allVals[0]);
+      const matchesFireValue = allVals.every(v => v === fireValue);
+
+      // ── CASE: MISMATCH — cards don't all share one value ──
+      if (!allSameValue) {
+        // Penalty cards always append to new slots
+        reshuffleDeckIfNeeded(gs);
+        const p1 = gs.deck.pop();
+        reshuffleDeckIfNeeded(gs);
+        const p2 = gs.deck.pop();
+        if (p1) addCardToHand(gs.hands[myId], p1);
+        if (p2) addCardToHand(gs.hands[myId], p2);
+        gs.fire.responses[myId] = 'burned';
+        gs.fire.queue = gs.fire.queue.slice(1);
+        gs.lastAction = `🔥 ${myName} threw mismatched cards — burn failed! Cards kept, drew 2 penalty cards!`;
+        _checkFireDone(gs);
+        return;
+      }
+
+      // ── VALID BURN: all selected cards share same value ──
+      // Null the slots — preserve positions
+      const byOwner = {};
+      for (const s of freshSelection) {
+        if (!byOwner[s.ownerId]) byOwner[s.ownerId] = [];
+        byOwner[s.ownerId].push(s.index);
+      }
+      const removedFromSelf = [];
+      const removedFromOpp = [];
+      for (const [ownerId, indices] of Object.entries(byOwner)) {
+        for (const idx of indices) {
+          const card = gs.hands[ownerId]?.[idx];
+          if (card) {
+            if (ownerId === myId) removedFromSelf.push(card);
+            else removedFromOpp.push({ card, ownerId, idx });
+            gs.hands[ownerId][idx] = null; // null slot — preserve positions
+          }
+        }
+      }
+
+      // Discard all burned cards
+      for (const card of removedFromSelf) gs.discard.push(card);
+      for (const { card } of removedFromOpp) gs.discard.push(card);
+
+      // Replace each opponent's vacated slot with one of responder's remaining cards
+      if (removedFromOpp.length > 0) {
+        const replacements = [];
+        for (let i = 0; i < gs.hands[myId].length; i++) {
+          if (gs.hands[myId][i] !== null) {
+            replacements.push(gs.hands[myId][i]);
+            gs.hands[myId][i] = null;
+          }
+        }
+        for (const { ownerId, idx } of removedFromOpp) {
+          const rep = replacements.shift();
+          if (rep) gs.hands[ownerId][idx] = rep;
+        }
+        // Remaining responder cards go back into their empty slots
+        for (const card of replacements) addCardToHand(gs.hands[myId], card);
+      }
+
+      forgetMissingCards(gs);
+
+      gs.fire.responses[myId] = 'burned';
+      gs.fire.queue = gs.fire.queue.slice(1);
+
+      const totalBurned = removedFromSelf.length + removedFromOpp.length;
+
+      // ── CASE 1: matched fire value (any count) — clean burn ──
+      if (matchesFireValue) {
+        gs.lastAction = `🔥 ${myName} burned ${totalBurned}x ${fireValue}(s) — clean burn!`;
+      } else if (freshSelection.length >= 2) {
+        // ── CASE 2: different value, 2+ cards — new fire with new value ──
+        gs.fire.burnedValue = allVals[0];
+        gs.lastAction = `🔥 ${myName} started a new fire with ${totalBurned}x ${allVals[0]}(s)! Fire spreads!`;
+      } else {
+        // ── Single card that doesn't match fire value — treat as mismatch ──
+        // Undo: restore nulled slots back to their cards
+        for (const card of removedFromSelf) {
+          // Find the slot we nulled and restore it
+          const idx = freshSelection.find(s => s.ownerId === myId)?.index;
+          if (idx !== undefined) gs.hands[myId][idx] = card;
+        }
+        for (const { card, ownerId, idx } of removedFromOpp) gs.hands[ownerId][idx] = card;
+        // Remove them from discard (they were just pushed)
+        gs.discard.splice(gs.discard.length - (removedFromSelf.length + removedFromOpp.length));
+        // Penalty cards append to new slots
+        reshuffleDeckIfNeeded(gs);
+        const p1 = gs.deck.pop();
+        reshuffleDeckIfNeeded(gs);
+        const p2 = gs.deck.pop();
+        if (p1) addCardToHand(gs.hands[myId], p1);
+        if (p2) addCardToHand(gs.hands[myId], p2);
+        gs.lastAction = `🔥 ${myName} tried to burn a single non-matching card — burn failed! Cards kept, drew 2 penalty cards!`;
+      }
+
+      _checkFireDone(gs);
+    });
+    fireSelection = [];
+  }
+}
+
+async function passFireResponse() {
+  const gs = gameState;
+  if (!gs || !gs.fire) return;
+  const responder = gs.fire.queue?.[0];
+  if (responder !== myId) return;
+  await mutate(gs => {
+    gs.fire.responses[myId] = 'passed';
+    gs.fire.queue = gs.fire.queue.slice(1);
+    gs.lastAction = `${myName} passed on the fire.`;
+    _checkFireDone(gs);
+  });
+  fireSelection = [];
+}
+
+// Called inside mutate — checks if all have responded and closes fire
+function _checkFireDone(gs) {
+  if (!gs.fire) return;
+  if (gs.fire.queue.length === 0) {
+    gs.fire.done = true;
+    gs.phase = 'draw';
+    gs.lastAction = (gs.lastAction || '') + ' Fire extinguished.';
+    gs.fire = null;
+  }
+}
+
+
+function advanceTurn(gs) {
+  gs.swapHalos = []; // clear halos when turn moves on
+  tempPeekCard = null; // clear any lingering peek
+
+  // Wipe ALL knownCards for ALL players on every turn end.
+  // Revealed cards (spy, peek, swap) are temporary — memory is the player's job.
+  if (gs.knownCards) {
+    for (const pid of Object.keys(gs.knownCards)) {
+      gs.knownCards[pid] = {};
+    }
+  }
+
+  const idx = gs.players.findIndex(p => p.id === gs.currentTurn);
+  const nextIdx = (idx + 1) % gs.players.length;
+  const nextPlayer = gs.players[nextIdx];
+  if (gs.cabo && nextPlayer.id === gs.cabo) {
+    endRound(gs);
+    return;
+  }
+  gs.currentTurn = nextPlayer.id;
+  gs.turnCount = (gs.turnCount || 0) + 1;
+
+  // 5-second window for anyone to start a fire before next turn begins
+  gs.phase = 'burn_window';
+  gs.burnWindow = { forPlayer: gs.currentTurn, durationMs: 5000 };
+}
+
+function endRound(gs) {
+  const roundScores = {};
+  for (let p of gs.players) {
+    const hand = gs.hands[p.id];
+    roundScores[p.id] = hand.reduce((sum, c) => sum + cardPoints(c), 0);
+  }
+  const callerScore = roundScores[gs.cabo];
+  const otherMin = Math.min(...gs.players.filter(p => p.id !== gs.cabo).map(p => roundScores[p.id]));
+  if (callerScore <= otherMin) roundScores[gs.cabo] = 0;
+  else roundScores[gs.cabo] *= 2;
+  for (let p of gs.players) gs.scores[p.id] = (gs.scores[p.id] || 0) + roundScores[p.id];
+  gs.roundScores = roundScores;
+  gs.lastAction = 'Round over!';
+  const losers = gs.players.filter(p => gs.scores[p.id] >= 100);
+  if (losers.length > 0) {
+    const winner = gs.players.reduce((a, b) => gs.scores[a.id] < gs.scores[b.id] ? a : b);
+    gs.gameOver = true;
+    gs.winner = winner.id;
+  } else {
+    gs.gameOver = false;
+  }
+  gs.phase = 'end';
+}
+
+// ═══════════════════════════════════════════
+// NEXT ROUND
+// ═══════════════════════════════════════════
+async function nextRound() {
+  await mutate(gs => {
+    if (gs.gameOver) return;
+    const players = gs.players;
+    const deck = makeDeck();
+    const hands = {};
+    let deckCopy = [...deck];
+    for (let p of players) {
+      hands[p.id] = [deckCopy.pop(), deckCopy.pop(), deckCopy.pop(), deckCopy.pop()];
+    }
+    gs.hands = hands;
+    gs.deck = deckCopy;
+    gs.discard = [];
+    gs.currentTurn = players[(players.findIndex(p => p.id === gs.cabo) + 1) % players.length].id;
+    gs.round++;
+    gs.cabo = null;
+    gs.caboLastRound = false;
+    gs.drawnCard = null;
+    gs.drawnFrom = '';
+    gs.phase = 'draw';
+    gs.knownCards = createInitialKnowledge(players);
+    gs.initialPeekDone = createInitialPeekState(players);
+    gs.fire = null;
+    gs.swapHalos = [];
+    gs.roundScores = null;
+    gs.lastAction = 'New round started!';
+  });
+  document.getElementById('scoreOverlay').classList.remove('show');
+  selectedHandIndex = -1;
+  drawnCard = null;
+  abilityTarget = null;
+}
+
+// ═══════════════════════════════════════════
+// SCORE OVERLAY
+// ═══════════════════════════════════════════
+function showScoreOverlay(gs) {
+  const overlay = document.getElementById('scoreOverlay');
+  const title = document.getElementById('overlayTitle');
+  const list = document.getElementById('scoreList');
+  const nextBtn = document.getElementById('nextRoundBtn');
+  const newBtn = document.getElementById('newGameBtn');
+  const rs = gs.roundScores || {};
+  const sorted = [...gs.players].sort((a, b) => (gs.scores[a.id] || 0) - (gs.scores[b.id] || 0));
+  list.innerHTML = sorted.map(p => `<li class="${gs.gameOver && gs.winner === p.id ? 'winner' : ''}">
+    <span>${escHtml(p.name)}${gs.cabo === p.id ? ' (CABO)' : ''}</span>
+    <span>+${rs[p.id] || 0} &nbsp; Total: ${gs.scores[p.id] || 0}</span>
+  </li>`).join('');
+  if (gs.gameOver) {
+    nextBtn.style.display = 'none';
+    newBtn.style.display = 'block';
+    const w = gs.players.find(p => p.id === gs.winner);
+    title.textContent = `⚔️ ${w?.name || '?'} Wins!`;
+    // Fire winner animation — short delay so the score overlay renders first
+    setTimeout(() => showWinnerAnimation(gs), 400);
+  } else {
+    title.textContent = `Round ${gs.round} Results`;
+    nextBtn.style.display = 'block';
+    nextBtn.disabled = !isHost;
+    nextBtn.textContent = isHost ? 'Next Round' : 'Waiting for host...';
+    newBtn.style.display = 'none';
+  }
+  overlay.classList.add('show');
+}
+
+// ═══════════════════════════════════════════
+// PEEK OVERLAY
+// ═══════════════════════════════════════════
+function showPeek(msg, card, ownerId, index) {
+  document.getElementById('peekMsg').textContent = msg;
+  document.getElementById('peekCardDisplay').innerHTML = renderCardHtml(card, true, '', 'peekCard');
+  document.getElementById('peekOverlay').classList.add('show');
+  if (ownerId !== undefined && index !== undefined) {
+    tempPeekCard = { ownerId, index };
+    if (gameState) renderGame(gameState);
+  }
+  if (peekTimeout) clearTimeout(peekTimeout);
+  peekTimeout = setTimeout(closePeek, 4000);
+}
+function closePeek() {
+  document.getElementById('peekOverlay').classList.remove('show');
+  tempPeekCard = null;
+  if (gameState) renderGame(gameState);
+}
+
+// ═══════════════════════════════════════════
+// UTILITY
+// ═══════════════════════════════════════════
+function debugStateText(gs) {
+  if (!new URLSearchParams(location.search).has('debug')) return '';
+  const handText = gs.players.map(p => {
+    const cards = (gs.hands[p.id] || []).map(cardLabel).join(',');
+    return `${p.name}:${cards}`;
+  }).join(' | ');
+  const discard = gs.discard.map(cardLabel).join(',');
+  return `turn=${gs.players.find(p => p.id === gs.currentTurn)?.name || '?'} phase=${gs.phase} deck=${gs.deck.length} discard=[${discard}] hands=${handText}`;
+}
+function renderDebugState(gs) {
+  if (!new URLSearchParams(location.search).has('debug')) return;
+  let el = document.getElementById('debugStatePanel');
+  if (!el) {
+    el = document.createElement('pre');
+    el.id = 'debugStatePanel';
+    el.style.cssText = 'position:fixed;left:8px;bottom:8px;right:8px;z-index:9999;max-height:110px;overflow:auto;background:rgba(0,0,0,.85);color:#d1fae5;padding:8px;border:1px solid #2dd4bf;border-radius:4px;font:11px/1.35 monospace;white-space:pre-wrap;';
+    document.body.appendChild(el);
+  }
+  el.textContent = debugStateText(gs);
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+let logLines = [];
+function addLog(msg) {
+  if (!msg || msg === logLines[logLines.length - 1]) return;
+  logLines.push(msg);
+  if (logLines.length > 20) logLines.shift();
+  const el = document.getElementById('gameLog');
+  el.innerHTML = logLines.map((l, i) =>
+    `<span class="${i === logLines.length - 1 ? 'log-new' : ''}">${escHtml(l)}</span>`
+  ).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+let toastTimer = null;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+async function backToLobby() {
+  if (socket) { socket.close(); socket = null; }
+  roomCode = '';
+  gameState = null;
+  showScreen('lobbyScreen');
+  document.getElementById('scoreOverlay').classList.remove('show');
+}
+
+// ═══════════════════════════════════════════
+// DEAL ANIMATION
+// Fires once at game start. Card backs fly from the
+// deck element to each player's hand slots round-robin,
+// using the same GoT card back SVG as the rest of the game.
+// Player count and positions are read live from the DOM.
+// ═══════════════════════════════════════════
+function playDealAnimation(gs) {
+  // Create or reuse overlay
+  let overlay = document.getElementById('dealOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'dealOverlay';
+    document.body.appendChild(overlay);
+  }
+  overlay.innerHTML = '';
+  overlay.classList.add('active');
+  document.body.classList.add('dealing');
+
+  // Locate the deck element for the start position
+  const deckEl = document.getElementById('deckCard');
+  if (!deckEl) { cleanup(); return; }
+  const deckR = deckEl.getBoundingClientRect();
+  const deckCx = deckR.left + deckR.width / 2;
+  const deckCy = deckR.top + deckR.height / 2;
+
+  // Map each player to their hand card slot elements (my_0..my_3 or opp_<id>_0..3)
+  // We target the rendered card elements directly so positions are always accurate.
+  function getSlotCenter(playerId, cardIdx) {
+    const isMe = playerId === myId;
+    const elId = isMe ? `my_${cardIdx}` : `opp_${playerId}_${cardIdx}`;
+    const el = document.getElementById(elId);
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  }
+
+  const players = gs.players;
+  const CARD_DUR = 420;   // ms per card flight
+  const STAGGER  = 100;   // ms between successive cards
+
+  // Build round-robin sequence: card 0 to all, card 1 to all, etc.
+  const sequence = [];
+  for (let cardIdx = 0; cardIdx < 4; cardIdx++) {
+    for (let pi = 0; pi < players.length; pi++) {
+      sequence.push({ playerId: players[pi].id, cardIdx });
+    }
+  }
+
+  let settled = 0;
+  const total = sequence.length;
+
+  sequence.forEach((item, i) => {
+    const delay = i * STAGGER;
+
+    setTimeout(() => {
+      const dest = getSlotCenter(item.playerId, item.cardIdx);
+      if (!dest) { checkDone(); return; }
+
+      // Build flying card with the real GoT card back SVG
+      const card = document.createElement('div');
+      card.className = 'flying-card';
+      card.innerHTML = cardBackSVG() + '<div class="fc-shimmer"></div>';
+
+      const startRot = (Math.random() * 14 - 7).toFixed(1);
+      const endRot   = (Math.random() * 6  - 3).toFixed(1);
+
+      card.style.cssText = `
+        left:${deckCx}px; top:${deckCy}px;
+        transform:translate(-50%,-50%) rotate(${startRot}deg) scale(0.82);
+        opacity:0;
+        transition:
+          left ${CARD_DUR}ms cubic-bezier(0.22,0.68,0.35,1.0),
+          top  ${CARD_DUR}ms cubic-bezier(0.22,0.68,0.35,1.0),
+          transform ${CARD_DUR}ms cubic-bezier(0.22,0.68,0.35,1.0),
+          opacity ${Math.round(CARD_DUR * 0.14)}ms ease;
+      `;
+      overlay.appendChild(card);
+
+      // Trigger flight on next paint
+      requestAnimationFrame(() => {
+        card.style.opacity = '1';
+        card.style.left    = dest.x + 'px';
+        card.style.top     = dest.y + 'px';
+        card.style.transform = `translate(-50%,-50%) rotate(${endRot}deg) scale(1)`;
+
+        // Shimmer sweep
+        const shimmer = card.querySelector('.fc-shimmer');
+        if (shimmer) {
+          shimmer.style.transition = `transform ${Math.round(CARD_DUR * 0.65)}ms ease-out`;
+          shimmer.style.transform  = 'translateX(200%)';
+        }
+      });
+
+      // On landing: gold ripple + remove flying card
+      setTimeout(() => {
+        // Gold ripple ring
+        const ripple = document.createElement('div');
+        ripple.style.cssText = `
+          position:absolute;
+          width:72px; height:108px; border-radius:8px;
+          border:1.5px solid rgba(201,168,76,0.85);
+          left:${dest.x}px; top:${dest.y}px;
+          transform:translate(-50%,-50%) scale(0.88);
+          opacity:0.85; pointer-events:none;
+          transition:transform 380ms ease-out, opacity 380ms ease-out;
+        `;
+        overlay.appendChild(ripple);
+        requestAnimationFrame(() => {
+          ripple.style.transform = 'translate(-50%,-50%) scale(1.6)';
+          ripple.style.opacity   = '0';
+        });
+        setTimeout(() => ripple.remove(), 400);
+
+        // Fade out and remove the flying card
+        card.style.transition = 'opacity 120ms ease';
+        card.style.opacity = '0';
+        setTimeout(() => { card.remove(); checkDone(); }, 130);
+      }, CARD_DUR);
+
+    }, delay);
+  });
+
+  function checkDone() {
+    settled++;
+    if (settled >= total) cleanup();
+  }
+
+  function cleanup() {
+    overlay.classList.remove('active');
+    document.body.classList.remove('dealing');
+    overlay.innerHTML = '';
+  }
+
+  // Safety fallback: always clean up after max possible duration
+  setTimeout(cleanup, STAGGER * total + CARD_DUR + 600);
+}
+
+// ═══════════════════════════════════════════
+// WINNER ANIMATION
+// ═══════════════════════════════════════════
+(function () {
+  let _wAnimId = null;
+  let _wRunning = false;
+
+  function _wSetStyle(el, props) { Object.assign(el.style, props); }
+
+  function _wEase(t, pow = 3) {
+    return t < 0.5 ? Math.pow(t * 2, pow) / 2 : 1 - Math.pow((1 - t) * 2, pow) / 2;
+  }
+
+  function _wSpawnParticles(stage) {
+    const cx = stage.offsetWidth / 2;
+    const cy = stage.offsetHeight / 2;
+    for (let i = 0; i < 60; i++) {
+      const p = document.createElement('div');
+      p.className = 'w-particle';
+      const size = 3 + Math.random() * 5;
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 80 + Math.random() * 200;
+      const hue = Math.random() < 0.6
+        ? `rgba(201,${120 + Math.floor(Math.random() * 80)},${20 + Math.floor(Math.random() * 40)},1)`
+        : `rgba(255,255,${180 + Math.floor(Math.random() * 75)},1)`;
+      p.style.cssText = `width:${size}px;height:${size}px;background:${hue};left:${cx}px;top:${cy}px;border-radius:${Math.random() < 0.3 ? '2px' : '50%'};`;
+      stage.appendChild(p);
+      const delay = 60 + Math.random() * 200;
+      const dur = 700 + Math.random() * 600;
+      const tx = Math.cos(angle) * speed;
+      const ty = Math.sin(angle) * speed;
+      const rot = (Math.random() - 0.5) * 720;
+      setTimeout(() => {
+        p.style.transition = `all ${dur}ms cubic-bezier(0.2,0.8,0.4,1)`;
+        p.style.opacity = '1';
+        p.style.transform = `translate(${tx}px,${ty}px) rotate(${rot}deg) scale(0.2)`;
+        p.style.left = (cx + tx) + 'px';
+        p.style.top  = (cy + ty) + 'px';
+        setTimeout(() => { p.style.opacity = '0'; }, dur * 0.5);
+        setTimeout(() => p.remove(), dur + 100);
+      }, delay);
+    }
+  }
+
+  function _wAnimateRays(canvas, ctx, startTime) {
+    const stage = canvas.parentElement;
+    const now = performance.now();
+    const t = Math.min((now - startTime) / 1400, 1);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const cx = canvas.width / 2, cy = canvas.height / 2;
+    const maxR = Math.hypot(cx, cy) * 1.1;
+    const opacity = t < 0.3 ? t / 0.3 : t < 0.7 ? 1 : 1 - (t - 0.7) / 0.3;
+    for (let i = 0; i < 16; i++) {
+      const base = (i / 16) * Math.PI * 2;
+      const sp = 0.06;
+      const a1 = base - sp, a2 = base + sp;
+      const ir = 60 + Math.sin(t * Math.PI * 2 + i) * 10;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(a1) * ir, cy + Math.sin(a1) * ir);
+      ctx.lineTo(cx + Math.cos(a1) * maxR, cy + Math.sin(a1) * maxR);
+      ctx.lineTo(cx + Math.cos(a2) * maxR, cy + Math.sin(a2) * maxR);
+      ctx.lineTo(cx + Math.cos(a2) * ir, cy + Math.sin(a2) * ir);
+      ctx.closePath();
+      const grad = ctx.createRadialGradient(cx, cy, ir, cx, cy, maxR);
+      grad.addColorStop(0, `rgba(201,168,76,${0.18 * opacity})`);
+      grad.addColorStop(1, `rgba(201,168,76,0)`);
+      ctx.fillStyle = grad;
+      ctx.fill();
+    }
+    if (t < 1) _wAnimId = requestAnimationFrame(() => _wAnimateRays(canvas, ctx, startTime));
+    else ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+
+  window.showWinnerAnimation = function (gs) {
+    const winnerPlayer = gs.players.find(p => p.id === gs.winner);
+    if (!winnerPlayer) return;
+
+    const stage   = document.getElementById('winnerStage');
+    const canvas  = document.getElementById('wRaysCanvas');
+    const ctx     = canvas.getContext('2d');
+    const ring    = document.getElementById('wRing');
+    const ring2   = document.getElementById('wRing2');
+    const crown   = document.getElementById('wCrown');
+    const card    = document.getElementById('wCard');
+
+    // Populate card content
+    document.getElementById('wName').textContent = winnerPlayer.name;
+    document.getElementById('wSubtitle').textContent =
+      `${gs.scores[winnerPlayer.id]} pts · Round ${gs.round}`;
+
+    const sorted = [...gs.players].sort((a, b) => (gs.scores[a.id] || 0) - (gs.scores[b.id] || 0));
+    document.getElementById('wScores').innerHTML = sorted.map(p => `
+      <div class="wc-row${p.id === gs.winner ? ' winner-row' : ''}">
+        <span>${p.id === gs.winner ? '⚔ ' : ''}${escHtml(p.name)}</span>
+        <span>${gs.scores[p.id] || 0}</span>
+      </div>`).join('');
+
+    // Resize canvas
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    // Show stage
+    stage.classList.add('show');
+
+    if (_wRunning) return;
+    _wRunning = true;
+
+    // Reset elements
+    cancelAnimationFrame(_wAnimId);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    _wSetStyle(canvas,  { opacity: '0' });
+    _wSetStyle(card,    { opacity: '0', transform: 'translate(-50%,-50%) scale(0.6)', transition: 'none' });
+    _wSetStyle(crown,   { opacity: '0', transform: 'translate(-50%,-50%) scale(0)', transition: 'none' });
+    _wSetStyle(ring,    { opacity: '0', transform: 'translate(-50%,-50%) scale(0)', transition: 'none' });
+    _wSetStyle(ring2,   { opacity: '0', transform: 'translate(-50%,-50%) scale(0)', transition: 'none' });
+
+    // Step 1 — rays
+    setTimeout(() => {
+      canvas.style.opacity = '1';
+      _wAnimateRays(canvas, ctx, performance.now());
+    }, 80);
+
+    // Step 2 — rings expand
+    setTimeout(() => {
+      _wSetStyle(ring,  { transition: 'transform 700ms cubic-bezier(0.2,0.8,0.35,1), opacity 200ms ease', opacity: '1', transform: 'translate(-50%,-50%) scale(1)' });
+      _wSetStyle(ring2, { transition: 'transform 600ms cubic-bezier(0.2,0.8,0.35,1) 80ms, opacity 200ms ease 80ms', opacity: '1', transform: 'translate(-50%,-50%) scale(1)' });
+    }, 80);
+
+    // Step 3 — crown pops in
+    setTimeout(() => {
+      _wSetStyle(crown, { transition: 'opacity 80ms ease, transform 320ms cubic-bezier(0.3,1.5,0.5,1)', opacity: '1', transform: 'translate(-50%,-50%) scale(1.15)' });
+      setTimeout(() => { _wSetStyle(crown, { transition: 'transform 200ms ease', transform: 'translate(-50%,-50%) scale(1)' }); }, 320);
+    }, 180);
+
+    // Step 4 — particles
+    setTimeout(() => _wSpawnParticles(stage), 220);
+
+    // Step 5 — winner card slides up
+    setTimeout(() => {
+      _wSetStyle(card, { transition: 'opacity 420ms ease, transform 500ms cubic-bezier(0.2,0.8,0.35,1)', opacity: '1', transform: 'translate(-50%,-52%) scale(1)' });
+    }, 440);
+
+    // Step 6 — crown floats up
+    setTimeout(() => {
+      _wSetStyle(crown, { transition: 'transform 900ms cubic-bezier(0.3,0.8,0.5,1), opacity 600ms ease', transform: 'translate(-50%,-220%) scale(0.65)', opacity: '0.6' });
+    }, 800);
+
+    // Step 7 — rings fade
+    setTimeout(() => {
+      _wSetStyle(ring,  { transition: 'opacity 600ms ease', opacity: '0' });
+      _wSetStyle(ring2, { transition: 'opacity 600ms ease', opacity: '0' });
+      _wRunning = false;
+    }, 1200);
+  };
+
+  window.dismissWinnerAnim = function () {
+    const stage = document.getElementById('winnerStage');
+    stage.classList.remove('show');
+    backToLobby();
+  };
+})();
+
+// Enter key support
+document.getElementById('playerName').addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    const code = document.getElementById('roomCodeInput').value.trim();
+    if (code) joinGame(); else hostGame();
+  }
+});
+document.getElementById('roomCodeInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') joinGame();
+});
+document.getElementById('roomCodeInput').addEventListener('input', e => {
+  e.target.value = e.target.value.toUpperCase();
+});
+</script>
+</body>
+</html>
