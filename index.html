@@ -593,6 +593,22 @@
     overflow: hidden;
   }
   #winnerStage.show { display: flex; }
+  #winnerCloseBtn {
+    position: absolute;
+    top: 18px; right: 22px;
+    background: rgba(201,168,76,0.1);
+    border: 1px solid rgba(201,168,76,0.35);
+    color: var(--gold);
+    font-size: 20px;
+    line-height: 1;
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 20;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s, color 0.2s;
+  }
+  #winnerCloseBtn:hover { background: rgba(201,168,76,0.25); color: var(--gold-light); }
   #winnerStage canvas#wRaysCanvas {
     position: absolute;
     inset: 0;
@@ -970,6 +986,7 @@
 
 <!-- WINNER ANIMATION OVERLAY -->
 <div id="winnerStage">
+  <button id="winnerCloseBtn" onclick="dismissWinnerAnim()" title="Close" aria-label="Close victory screen">✕</button>
   <canvas id="wRaysCanvas"></canvas>
   <div id="wRing"></div>
   <div id="wRing2"></div>
@@ -980,7 +997,7 @@
     <div class="wc-score" id="wSubtitle">—</div>
     <div class="wc-divider"></div>
     <div class="wc-scores" id="wScores"></div>
-    <button class="wc-cta" onclick="dismissWinnerAnim()">Play Again</button>
+    <button class="wc-cta" onclick="dismissWinnerAnim()">View Scores</button>
   </div>
 </div>
 
@@ -3201,7 +3218,7 @@ function playSwapAnimation(elIdA, elIdB, onDone) {
   window.dismissWinnerAnim = function () {
     const stage = document.getElementById('winnerStage');
     stage.classList.remove('show');
-    backToLobby();
+    // Score overlay is already showing behind — player can now see scores and use Play Again
   };
 })();
 
