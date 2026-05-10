@@ -1275,6 +1275,8 @@ function connectToRoom(code, onOpenExtra) {
               toId: p.toOwnerId === myId ? `my_${p.toIndex}` : `opp_${p.toOwnerId}_${p.toIndex}`,
             }));
             requestAnimationFrame(() => playFireBurnAnimation(burnedSlots, pushedMoves));
+            // Locally clear so repeated state broadcasts don't replay the animation
+            gameState.fireAnimEvent = null;
           } else {
             renderGame(gs);
           }
@@ -2647,7 +2649,7 @@ async function burnFireSelection() {
 
     if (allSameValue) {
       playFireBurnAnimation(burnedSlots, pushedMoves);
-      setTimeout(() => { if (gameState) mutate(gs => { gs.pushHalos = []; }); }, 2200);
+      setTimeout(() => { if (gameState) mutate(gs => { gs.pushHalos = []; gs.fireAnimEvent = null; }); }, 2200);
     }
     fireSelection = [];
     return;
@@ -2787,7 +2789,7 @@ async function burnFireSelection() {
 
     if (didValidBurn) {
       playFireBurnAnimation(burnedSlots2, pushedMoves2);
-      setTimeout(() => { if (gameState) mutate(gs => { gs.pushHalos = []; }); }, 2200);
+      setTimeout(() => { if (gameState) mutate(gs => { gs.pushHalos = []; gs.fireAnimEvent = null; }); }, 2200);
     }
     fireSelection = [];
   }
