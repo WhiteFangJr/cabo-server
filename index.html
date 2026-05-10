@@ -951,7 +951,7 @@
     <div class="wc-score" id="wSubtitle">&mdash;</div>
     <div class="wc-divider"></div>
     <div class="wc-scores" id="wScores"></div>
-    <button class="wc-cta" onclick="dismissWinnerAnim()">Play Again</button>
+    <button class="wc-cta" onclick="dismissWinnerAnim()">View Scoreboard</button>
   </div>
 </div>
 
@@ -1579,7 +1579,10 @@ function renderGame(gs) {
   document.getElementById('roundLabel').textContent = `Round ${gs.round}`;
   const statusEl = document.getElementById('turnStatus');
   const isDone = gs.phase === 'done';
-  if (isDone && isMyTurn) {
+  if (gs.phase === 'end') {
+    statusEl.textContent = 'Game Over';
+    statusEl.className = 'status-pill waiting';
+  } else if (isDone && isMyTurn) {
     statusEl.textContent = 'End Turn';
     statusEl.className = 'status-pill your-turn';
   } else if (isDone) {
@@ -1819,7 +1822,21 @@ function renderActions(gs, isMyTurn, myHand) {
   const msg = document.getElementById('actionMsg');
   const btns = document.getElementById('actionBtns');
   btns.innerHTML = '';
-  if (gs.gameOver) { msg.textContent = 'Game over!'; return; }
+  if (gs.gameOver) {
+    const winner = gs.players.find(p => p.id === gs.winner);
+    const sorted = [...gs.players].sort((a, b) => (gs.scores[a.id] || 0) - (gs.scores[b.id] || 0));
+    msg.innerHTML = `
+      <span style="font-family:'Cinzel',serif;font-size:13px;color:var(--gold);letter-spacing:0.1em">
+        👑 ${escHtml(winner?.name || '?')} wins! &nbsp;·&nbsp;
+        ${sorted.map(p => `${escHtml(p.name)}: ${gs.scores[p.id] ?? 0}pts`).join(' &nbsp;|&nbsp; ')}
+      </span>`;
+    if (isHost) {
+      btns.innerHTML = `<button class="btn btn-primary" onclick="backToLobby()">⚔ Play Again</button>`;
+    } else {
+      btns.innerHTML = `<span style="font-family:'Cinzel',serif;font-size:11px;color:var(--muted);letter-spacing:0.1em">Waiting for host to start a new game…</span>`;
+    }
+    return;
+  }
 
 
   // ── BURN WINDOW PHASE ──
@@ -3124,7 +3141,7 @@ function playSwapAnimation(elIdA, elIdB, onDone) {
     stage.classList.remove('show');
     cancelAnimationFrame(_wAnimId);
     _wRunning = false;
-    backToLobby();
+    // Stay on the game screen — player sees all cards face-up with scores
   };
 })();
 
