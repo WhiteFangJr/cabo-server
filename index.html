@@ -957,7 +957,8 @@
 
 <!-- OVERLAYS -->
 <div class="overlay" id="scoreOverlay">
-  <div class="overlay-box">
+  <div class="overlay-box" style="position:relative">
+    <button onclick="document.getElementById('scoreOverlay').classList.remove('show')" title="Close" aria-label="Close scores" style="position:absolute;top:12px;right:14px;background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.35);color:var(--gold);font-size:18px;width:34px;height:34px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;transition:background 0.2s">✕</button>
     <h2 id="overlayTitle">Game Over</h2>
     <ul class="score-list" id="scoreList"></ul>
     <button class="btn btn-primary" id="playAgainBtn" onclick="backToLobby()" style="margin-top:16px">Play Again</button>
@@ -2677,22 +2678,18 @@ function advanceTurn(gs) {
 }
 
 function endRound(gs) {
-  const rawScores = {};
+  // Score = raw hand card total for every player — lowest wins
+  const handScores = {};
   for (let p of gs.players) {
     const hand = gs.hands[p.id];
-    rawScores[p.id] = hand.filter(c => c).reduce((sum, c) => sum + cardPoints(c), 0);
+    handScores[p.id] = hand.filter(c => c).reduce((sum, c) => sum + cardPoints(c), 0);
   }
-  const roundScores = { ...rawScores };
-  const callerScore = rawScores[gs.cabo];
-  const otherMin = Math.min(...gs.players.filter(p => p.id !== gs.cabo).map(p => rawScores[p.id]));
-  if (callerScore <= otherMin) roundScores[gs.cabo] = 0;
-  else roundScores[gs.cabo] = callerScore * 2;
-  for (let p of gs.players) gs.scores[p.id] = (gs.scores[p.id] || 0) + roundScores[p.id];
-  gs.roundScores = roundScores;
-  gs.rawHandScores = rawScores;  // actual card totals before cabo penalty/bonus
-  gs.revealedHands = true;       // signal all clients to show cards face-up
+  for (let p of gs.players) gs.scores[p.id] = handScores[p.id];
+  gs.roundScores = handScores;
+  gs.rawHandScores = handScores;
+  gs.revealedHands = true;
   gs.lastAction = 'Round over!';
-  // Single-round game: always end after round 1 — lowest score wins
+  // Single-round game — lowest hand score wins
   const winner = gs.players.reduce((a, b) => gs.scores[a.id] < gs.scores[b.id] ? a : b);
   gs.gameOver = true;
   gs.winner = winner.id;
@@ -2750,13 +2747,10 @@ function showScoreOverlay(gs) {
   list.innerHTML = sorted.map(p => {
     const isWinner = gs.winner === p.id;
     const isCabo = gs.cabo === p.id;
-    const handPts = rawScores[p.id] ?? (rs[p.id] || 0);
-    const roundPts = rs[p.id] || 0;
-    const penaltyNote = isCabo && roundPts > handPts ? ` <span style="color:#f97316;font-size:10px">(×2 penalty)</span>` : '';
-    const bonusNote = isCabo && roundPts === 0 && handPts > 0 ? ` <span style="color:#6abf70;font-size:10px">(lowest!)</span>` : '';
+    const score = rawScores[p.id] ?? (rs[p.id] || 0);
     return `<li class="${isWinner ? 'winner' : ''}">
       <span>${isWinner ? '👑 ' : ''}${escHtml(p.name)}${isCabo ? ' ⚔️' : ''}</span>
-      <span>Hand: ${handPts}${penaltyNote}${bonusNote} &nbsp; Score: ${roundPts}</span>
+      <span>${score} pts</span>
     </li>`;
   }).join('');
   const w = gs.players.find(p => p.id === gs.winner);
