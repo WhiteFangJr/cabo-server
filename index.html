@@ -738,6 +738,51 @@
     will-change: transform, left, top, opacity;
   }
   .swap-flying-card svg { width: 100%; height: 100%; display: block; }
+
+  /* ── FIRE HALO — orange glow on cards being burned (visible to all) ── */
+  .card.fire-burning {
+    border-color: #f97316 !important;
+    box-shadow: 0 0 0 2px #f97316, 0 0 18px 8px rgba(249,115,22,0.55), 0 6px 20px rgba(0,0,0,0.35) !important;
+    animation: fireHaloPulse 0.7s ease-in-out infinite !important;
+  }
+  @keyframes fireHaloPulse {
+    0%,100% { box-shadow: 0 0 0 2px #f97316, 0 0 14px 6px rgba(249,115,22,0.45), 0 6px 20px rgba(0,0,0,0.35); }
+    50%      { box-shadow: 0 0 0 3px #fb923c, 0 0 28px 12px rgba(249,115,22,0.75), 0 6px 20px rgba(0,0,0,0.35); }
+  }
+
+  /* ── FIRE PUSH HALO — green/teal glow on cards pushed to opponents ── */
+  .card.fire-pushed {
+    border-color: #34d399 !important;
+    box-shadow: 0 0 0 2px #34d399, 0 0 18px 8px rgba(52,211,153,0.5), 0 6px 20px rgba(0,0,0,0.35) !important;
+    animation: firePushPulse 0.8s ease-in-out infinite !important;
+  }
+  @keyframes firePushPulse {
+    0%,100% { box-shadow: 0 0 0 2px #34d399, 0 0 14px 5px rgba(52,211,153,0.4), 0 6px 20px rgba(0,0,0,0.35); }
+    50%      { box-shadow: 0 0 0 3px #6ee7b7, 0 0 26px 10px rgba(52,211,153,0.65), 0 6px 20px rgba(0,0,0,0.35); }
+  }
+
+  /* ── FIRE ANIMATION OVERLAY ── */
+  #fireOverlay {
+    display: none;
+    position: fixed; inset: 0;
+    z-index: 650;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  #fireOverlay.active { display: block; }
+  .fire-flying-card {
+    position: absolute;
+    width: 72px; height: 108px;
+    border-radius: 8px;
+    overflow: hidden;
+    pointer-events: none;
+    opacity: 0;
+    will-change: left, top, opacity, transform;
+  }
+  .fire-flying-card.small-fly {
+    width: 52px; height: 78px;
+  }
+  .fire-flying-card svg { width: 100%; height: 100%; display: block; }
 </style>
 </head>
 <body>
@@ -937,6 +982,9 @@
 
 <!-- SWAP ANIMATION OVERLAY -->
 <div id="swapOverlay"></div>
+
+<!-- FIRE ANIMATION OVERLAY -->
+<div id="fireOverlay"></div>
 
 <!-- WINNER ANIMATION OVERLAY -->
 <div id="winnerStage">
@@ -1206,12 +1254,30 @@ function connectToRoom(code, onOpenExtra) {
       const msg = JSON.parse(evt.data);
       if (msg.type === 'state') {
         const gs = msg.state;
+        const prevGs = gameState;
         gameState = gs;
         if (gs.phase === 'lobby') {
           renderWaiting(gs);
         } else {
           if (document.getElementById('waitingScreen').classList.contains('active')) showScreen('gameScreen');
-          renderGame(gs);
+          // ── Fire animation for observers: render FIRST (so card slots exist in DOM),
+          // then play animation using the fireAnimEvent attached to incoming state ──
+          const fireEvt = gs.fireAnimEvent;
+          if (fireEvt && fireEvt.actorId !== myId) {
+            // Render with ghost slots still in place, then animate
+            renderGame(gs);
+            const burnedSlots = (fireEvt.burned || []).map(b => ({
+              elId: b.ownerId === myId ? `my_${b.index}` : `opp_${b.ownerId}_${b.index}`,
+              isSmall: b.ownerId !== myId
+            }));
+            const pushedMoves = (fireEvt.pushed || []).map(p => ({
+              fromId: p.fromOwnerId === myId ? `my_${p.fromIndex}` : `opp_${p.fromOwnerId}_${p.fromIndex}`,
+              toId: p.toOwnerId === myId ? `my_${p.toIndex}` : `opp_${p.toOwnerId}_${p.toIndex}`,
+            }));
+            requestAnimationFrame(() => playFireBurnAnimation(burnedSlots, pushedMoves));
+          } else {
+            renderGame(gs);
+          }
         }
       } else if (msg.type === 'join_queued') {
         // Server didn't have state yet — retry join after a short delay
@@ -1300,6 +1366,8 @@ async function hostGame() {
     initialPeekDone: {},
     fire: null,
     swapHalos: [],
+    fireHalos: [],
+    pushHalos: [],
     roundScores: null,
     gameOver: false,
     winner: null,
@@ -1399,6 +1467,8 @@ function initGameState(players) {
     initialPeekDone: createInitialPeekState(players),
     fire: null,
     swapHalos: [],
+    fireHalos: [],
+    pushHalos: [],
     roundScores: null,
     gameOver: false,
     winner: null,
@@ -1647,6 +1717,9 @@ function renderGame(gs) {
       }
       const isHalo = (gs.swapHalos || []).some(h => h.ownerId === p.id && h.index === i);
       const haloClass = isHalo ? ' just-swapped' : '';
+      const isFireHalo = (gs.fireHalos || []).some(h => h.ownerId === p.id && h.index === i);
+      const isPushHalo = (gs.pushHalos || []).some(h => h.ownerId === p.id && h.index === i);
+      const fireHaloClass = isFireHalo ? ' fire-burning' : (isPushHalo ? ' fire-pushed' : '');
       const isPeekedByOther = gs.peekIndicator && gs.peekIndicator.ownerId === p.id && gs.peekIndicator.index === i && gs.peekIndicator.peekerId !== myId;
       const isPeekedBySelf = gs.peekIndicator && gs.peekIndicator.ownerId === p.id && gs.peekIndicator.index === i && gs.peekIndicator.peekerId === myId;
       const peekerName = isPeekedByOther ? (gs.players.find(pl => pl.id === gs.peekIndicator.peekerId)?.name || '?') : '';
@@ -1655,7 +1728,7 @@ function renderGame(gs) {
         : isPeekedByOther ? `<span class="peek-badge">👁 ${escHtml(peekerName)}</span>`
         : isPeekedBySelf ? '<span class="peek-badge" style="background:#1e40af">👁 You</span>'
         : '';
-      const cardHtml = renderCardHtml(known ? c : null, known, `small${nearClass}${fireSelClass}${fireSel}${haloClass}`, `opp_${p.id}_${i}`, click);
+      const cardHtml = renderCardHtml(known ? c : null, known, `small${nearClass}${fireSelClass}${fireSel}${haloClass}${fireHaloClass}`, `opp_${p.id}_${i}`, click);
       return hasBadge ? `<div style="position:relative;display:inline-block">${badge}${cardHtml}</div>` : cardHtml;
     };
 
@@ -1743,8 +1816,11 @@ function renderGame(gs) {
       }
       const isHalo = (gs.swapHalos || []).some(h => h.ownerId === myId && h.index === i);
       const haloClass = isHalo ? ' just-swapped' : '';
+      const isFireHalo = (gs.fireHalos || []).some(h => h.ownerId === myId && h.index === i);
+      const isPushHalo = (gs.pushHalos || []).some(h => h.ownerId === myId && h.index === i);
+      const fireHaloClass = isFireHalo ? ' fire-burning' : (isPushHalo ? ' fire-pushed' : '');
       const badge = isHalo ? '<span class="swap-badge">NEW</span>' : '';
-      const cardHtml = renderCardHtml(known ? c : null, known, sel + fireClass + fireSel + haloClass, `my_${i}`, click);
+      const cardHtml = renderCardHtml(known ? c : null, known, sel + fireClass + fireSel + haloClass + fireHaloClass, `my_${i}`, click);
       return isHalo ? `<div style="position:relative;display:inline-block">${badge}${cardHtml}</div>` : cardHtml;
     };
     // Layout: render all slots in a fixed 2-column grid.
@@ -2369,91 +2445,167 @@ function toggleFireCard(ownerId, index) {
   const i = fireSelection.findIndex(s => s.ownerId === ownerId && s.index === index);
   if (i >= 0) fireSelection.splice(i, 1);
   else fireSelection.push({ ownerId, index });
-  renderGame(gameState);
+  // Sync fireHalos into shared state so all observers see orange glow in real-time
+  mutate(gs => {
+    gs.fireHalos = fireSelection.map(s => ({ ownerId: s.ownerId, index: s.index }));
+  });
+}
+
+// ═══════════════════════════════════════════
+// FIRE CARD ANIMATION
+// ═══════════════════════════════════════════
+// Capture positions of elements NOW (before DOM changes), then animate after.
+function _getElCenter(id) {
+  const el = document.getElementById(id);
+  if (!el) return null;
+  const r = el.getBoundingClientRect();
+  return { x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width, h: r.height };
+}
+
+function playFireBurnAnimation(burnedSlots, pushedMoves) {
+  // burnedSlots: [{elId, isSmall}]  — cards flying to discard
+  // pushedMoves: [{fromId, toId, isSmall}] — starter cards flying to opponent slots
+  const overlay = document.getElementById('fireOverlay');
+  if (!overlay) return;
+
+  const discardPos = _getElCenter('discardCard');
+  if (!discardPos) return;
+
+  // Grab all start positions before DOM changes
+  const burnStart = burnedSlots.map(s => ({ pos: _getElCenter(s.elId), isSmall: s.isSmall })).filter(s => s.pos);
+  const pushMoves = pushedMoves.map(m => ({ from: _getElCenter(m.fromId), to: _getElCenter(m.toId), isSmall: m.isSmall })).filter(m => m.from && m.to);
+
+  overlay.innerHTML = '';
+  overlay.classList.add('active');
+
+  const BURN_DUR = 480;
+  const PUSH_DUR = 420;
+  const PUSH_DELAY = 200; // push starts shortly after burn begins
+
+  function makeFlyer(cx, cy, isSmall, borderColor) {
+    const el = document.createElement('div');
+    el.className = 'fire-flying-card' + (isSmall ? ' small-fly' : '');
+    el.innerHTML = cardBackSVG();
+    el.style.cssText = `left:${cx}px;top:${cy}px;transform:translate(-50%,-50%) scale(1);opacity:0;`
+      + `box-shadow:0 8px 28px rgba(0,0,0,0.65),0 0 0 2.5px ${borderColor},0 0 18px 6px ${borderColor.replace('1)', '0.5)')};`;
+    overlay.appendChild(el);
+    return el;
+  }
+
+  // Animate burn cards → discard
+  burnStart.forEach(({ pos, isSmall }, i) => {
+    const flyer = makeFlyer(pos.x, pos.y, isSmall, 'rgba(249,115,22,1)');
+    setTimeout(() => {
+      flyer.style.transition = 'opacity 80ms ease';
+      flyer.style.opacity = '1';
+      setTimeout(() => {
+        flyer.style.transition = `left ${BURN_DUR}ms cubic-bezier(0.4,0,0.2,1), top ${BURN_DUR}ms cubic-bezier(0.4,0,0.2,1), transform ${BURN_DUR}ms ease, opacity 120ms ease ${BURN_DUR - 100}ms`;
+        flyer.style.left = discardPos.x + 'px';
+        flyer.style.top  = discardPos.y + 'px';
+        flyer.style.transform = 'translate(-50%,-50%) scale(0.85) rotate(6deg)';
+        flyer.style.opacity = '0';
+      }, 80 + i * 40);
+    }, i * 30);
+  });
+
+  // Animate push moves: starter card → opponent slot (green)
+  pushMoves.forEach(({ from, to, isSmall }, i) => {
+    const flyer = makeFlyer(from.x, from.y, isSmall, 'rgba(52,211,153,1)');
+    setTimeout(() => {
+      flyer.style.transition = 'opacity 80ms ease';
+      flyer.style.opacity = '1';
+      setTimeout(() => {
+        flyer.style.transition = `left ${PUSH_DUR}ms cubic-bezier(0.4,0,0.2,1), top ${PUSH_DUR}ms cubic-bezier(0.4,0,0.2,1), opacity 120ms ease ${PUSH_DUR - 80}ms`;
+        flyer.style.left = to.x + 'px';
+        flyer.style.top  = to.y + 'px';
+        flyer.style.opacity = '0';
+      }, 80);
+    }, PUSH_DELAY + i * 60);
+  });
+
+  const totalDur = Math.max(
+    burnStart.length ? BURN_DUR + burnStart.length * 40 + 200 : 0,
+    pushMoves.length ? PUSH_DELAY + PUSH_DUR + pushMoves.length * 60 + 200 : 0,
+    400
+  );
+  setTimeout(() => {
+    overlay.classList.remove('active');
+    overlay.innerHTML = '';
+  }, totalDur);
 }
 
 // Starter commits their burn
 async function burnFireSelection() {
   const gs = gameState;
   if (!gs || !gs.fire) return;
-  // Use gs.fire.starterId but also cross-check with myId to avoid stale-state race conditions
   const isStarter = gs.fire.starterId === myId;
   const responder = gs.fire.queue?.[0];
-  // Starter can never be a responder — even if queue somehow contains myId
   const isMyTurnToRespond = !isStarter && responder === myId && responder !== gs.fire.starterId;
 
   if (isStarter && !gs.fire.burnedValue) {
-    // Starter must select 2+ cards from any players
     if (fireSelection.length < 2) { showToast('Select at least 2 cards to start the fire'); return; }
 
-    // Separate own vs opponent cards
-    const myCards = fireSelection.filter(s => s.ownerId === myId);
     const oppCards = fireSelection.filter(s => s.ownerId !== myId);
-
-    // Check: starter needs enough remaining cards to replace taken opponent cards
-    // "remaining" = own cards NOT selected
-    // No card count check needed — if starter has fewer remaining cards than opponent slots,
-    // we simply give all remaining cards to opponents and starter ends up with 0.
-
-    // Gather values of ALL selected cards
-    const vals = fireSelection.map(s => {
-      const owner = s.ownerId;
-      return gs.hands[owner]?.[s.index]?.value;
-    });
+    const vals = fireSelection.map(s => gs.hands[s.ownerId]?.[s.index]?.value);
     if (vals.some(v => !v)) { showToast('One of the selected cards is invalid.'); return; }
+    const allSameValue = vals.every(v => v === vals[0]);
+
+    // ── Capture DOM positions BEFORE mutate ──
+    const burnedSlots = fireSelection.map(s => ({
+      elId: s.ownerId === myId ? `my_${s.index}` : `opp_${s.ownerId}_${s.index}`,
+      isSmall: s.ownerId !== myId
+    }));
+    const mySelIndices = new Set(fireSelection.filter(s => s.ownerId === myId).map(s => s.index));
+    const remainingMySlots = [];
+    for (let i = 0; i < (gs.hands[myId]?.length || 0); i++) {
+      if (gs.hands[myId][i] !== null && !mySelIndices.has(i)) remainingMySlots.push(i);
+    }
+    const pushedMoves = oppCards.map((opp, i) => ({
+      fromId: remainingMySlots[i] !== undefined ? `my_${remainingMySlots[i]}` : null,
+      toId: `opp_${opp.ownerId}_${opp.index}`,
+    })).filter(m => m.fromId);
 
     await mutate(gs => {
-      // --- Recompute values from fresh state inside mutate ---
       const freshVals = fireSelection.map(s => gs.hands[s.ownerId]?.[s.index]?.value).filter(Boolean);
-      const allSameValue = freshVals.length > 0 && freshVals.every(v => v === freshVals[0]);
-      const burnedValue = freshVals[0] || vals[0]; // fallback to pre-read val
+      const allSame = freshVals.length > 0 && freshVals.every(v => v === freshVals[0]);
+      const burnedValue = freshVals[0] || vals[0];
 
-      // --- MISMATCH: abort the burn entirely — cards stay, starter draws 2 penalty, fire is cancelled ---
-      if (!allSameValue) {
-        // Penalty cards always append to new slots (they are new cards, not replacements)
+      if (!allSame) {
         reshuffleDeckIfNeeded(gs);
         const penalty1 = gs.deck.pop();
         reshuffleDeckIfNeeded(gs);
         const penalty2 = gs.deck.pop();
         if (penalty1) addCardToHand(gs.hands[myId], penalty1);
         if (penalty2) addCardToHand(gs.hands[myId], penalty2);
-        // Cancel fire — no cards discarded, no fire phase
         gs.fire = null;
         gs.phase = 'draw';
+        gs.fireHalos = [];
+        gs.fireAnimEvent = null;
+        gs.pushHalos = [];
         gs.lastAction = `🔥 ${myName} tried to burn mismatched cards — burn failed! Cards kept, drew 2 penalty cards!`;
         return;
       }
 
-      // --- All cards match: null the slots (preserve positions) ---
       const byOwner = {};
       for (const s of fireSelection) {
         if (!byOwner[s.ownerId]) byOwner[s.ownerId] = [];
         byOwner[s.ownerId].push(s.index);
       }
-
-      const removedFromOpp = []; // slots taken FROM opponents
-      const removedFromSelf = []; // cards burned from starter's own hand
-
+      const removedFromOpp = [];
+      const removedFromSelf = [];
       for (const [ownerId, indices] of Object.entries(byOwner)) {
         for (const idx of indices) {
           const card = gs.hands[ownerId]?.[idx];
           if (card) {
-            if (ownerId === myId) {
-              removedFromSelf.push(card);
-            } else {
-              removedFromOpp.push({ card, ownerId, idx });
-            }
-            gs.hands[ownerId][idx] = null; // null the slot — preserve positions
+            if (ownerId === myId) removedFromSelf.push(card);
+            else removedFromOpp.push({ card, ownerId, idx });
+            gs.hands[ownerId][idx] = null;
           }
         }
       }
-
-      // All removed cards go to discard
       for (const card of removedFromSelf) gs.discard.push(card);
       for (const { card } of removedFromOpp) gs.discard.push(card);
 
-      // --- Replace opponent's vacated slots with starter's remaining cards ---
-      // Pull cards from starter's non-null slots in order, place into opponent's exact vacated slots.
       if (removedFromOpp.length > 0) {
         const replacements = [];
         for (let i = 0; i < gs.hands[myId].length; i++) {
@@ -2466,11 +2618,25 @@ async function burnFireSelection() {
           const rep = replacements.shift();
           if (rep) gs.hands[ownerId][idx] = rep;
         }
-        // Any remaining starter cards go back into starter's empty slots
         for (const card of replacements) addCardToHand(gs.hands[myId], card);
       }
 
       forgetMissingCards(gs);
+      // Green halos on cards pushed to opponents
+      gs.pushHalos = removedFromOpp.map(o => ({ ownerId: o.ownerId, index: o.idx }));
+      gs.fireHalos = [];
+      // Animation event for observers (they check actorId !== myId)
+      gs.fireAnimEvent = {
+        actorId: myId,
+        burned: [...fireSelection.filter(s => s.ownerId === myId).map(s => ({ ownerId: s.ownerId, index: s.index })),
+                 ...removedFromOpp.map(o => ({ ownerId: o.ownerId, index: o.idx }))],
+        pushed: removedFromOpp.map((o, i) => ({
+          fromOwnerId: myId,
+          fromIndex: remainingMySlots[i],
+          toOwnerId: o.ownerId,
+          toIndex: o.idx
+        })).filter(p => p.fromIndex !== undefined)
+      };
 
       const totalBurned = removedFromSelf.length + removedFromOpp.length;
       gs.fire.burnedValue = burnedValue;
@@ -2478,6 +2644,11 @@ async function burnFireSelection() {
       gs.fire.starterPenalty = false;
       gs.lastAction = `🔥 ${myName} burned ${totalBurned}x ${burnedValue} (including from opponents) — Fire spreads!`;
     });
+
+    if (allSameValue) {
+      playFireBurnAnimation(burnedSlots, pushedMoves);
+      setTimeout(() => { if (gameState) mutate(gs => { gs.pushHalos = []; }); }, 2200);
+    }
     fireSelection = [];
     return;
   }
@@ -2485,10 +2656,26 @@ async function burnFireSelection() {
   if (isMyTurnToRespond) {
     if (fireSelection.length === 0) { showToast('Select at least 1 card to burn, or press Pass'); return; }
 
+    // ── Capture DOM positions BEFORE mutate ──
+    const oppCards2 = fireSelection.filter(s => s.ownerId !== myId);
+    const burnedSlots2 = fireSelection.map(s => ({
+      elId: s.ownerId === myId ? `my_${s.index}` : `opp_${s.ownerId}_${s.index}`,
+      isSmall: s.ownerId !== myId
+    }));
+    const mySelIndices2 = new Set(fireSelection.filter(s => s.ownerId === myId).map(s => s.index));
+    const remainingMySlots2 = [];
+    for (let i = 0; i < (gs.hands[myId]?.length || 0); i++) {
+      if (gs.hands[myId][i] !== null && !mySelIndices2.has(i)) remainingMySlots2.push(i);
+    }
+    const pushedMoves2 = oppCards2.map((opp, i) => ({
+      fromId: remainingMySlots2[i] !== undefined ? `my_${remainingMySlots2[i]}` : null,
+      toId: `opp_${opp.ownerId}_${opp.index}`,
+    })).filter(m => m.fromId);
+
+    let didValidBurn = false;
+
     await mutate(gs => {
       const fireValue = gs.fire.burnedValue;
-
-      // Read fresh values for all selected cards
       const freshSelection = fireSelection.map(s => ({
         ownerId: s.ownerId,
         index: s.index,
@@ -2497,15 +2684,11 @@ async function burnFireSelection() {
 
       if (freshSelection.length === 0) return;
 
-      const mySelected = freshSelection.filter(s => s.ownerId === myId);
-      const oppSelected = freshSelection.filter(s => s.ownerId !== myId);
       const allVals = freshSelection.map(s => s.value);
       const allSameValue = allVals.every(v => v === allVals[0]);
       const matchesFireValue = allVals.every(v => v === fireValue);
 
-      // ── CASE: MISMATCH — cards don't all share one value ──
       if (!allSameValue) {
-        // Penalty cards always append to new slots
         reshuffleDeckIfNeeded(gs);
         const p1 = gs.deck.pop();
         reshuffleDeckIfNeeded(gs);
@@ -2514,13 +2697,14 @@ async function burnFireSelection() {
         if (p2) addCardToHand(gs.hands[myId], p2);
         gs.fire.responses[myId] = 'burned';
         gs.fire.queue = gs.fire.queue.slice(1);
+        gs.fireHalos = [];
+        gs.fireAnimEvent = null;
+        gs.pushHalos = [];
         gs.lastAction = `🔥 ${myName} threw mismatched cards — burn failed! Cards kept, drew 2 penalty cards!`;
         _checkFireDone(gs);
         return;
       }
 
-      // ── VALID BURN: all selected cards share same value ──
-      // Null the slots — preserve positions
       const byOwner = {};
       for (const s of freshSelection) {
         if (!byOwner[s.ownerId]) byOwner[s.ownerId] = [];
@@ -2534,16 +2718,13 @@ async function burnFireSelection() {
           if (card) {
             if (ownerId === myId) removedFromSelf.push(card);
             else removedFromOpp.push({ card, ownerId, idx });
-            gs.hands[ownerId][idx] = null; // null slot — preserve positions
+            gs.hands[ownerId][idx] = null;
           }
         }
       }
-
-      // Discard all burned cards
       for (const card of removedFromSelf) gs.discard.push(card);
       for (const { card } of removedFromOpp) gs.discard.push(card);
 
-      // Replace each opponent's vacated slot with one of responder's remaining cards
       if (removedFromOpp.length > 0) {
         const replacements = [];
         for (let i = 0; i < gs.hands[myId].length; i++) {
@@ -2556,47 +2737,58 @@ async function burnFireSelection() {
           const rep = replacements.shift();
           if (rep) gs.hands[ownerId][idx] = rep;
         }
-        // Remaining responder cards go back into their empty slots
         for (const card of replacements) addCardToHand(gs.hands[myId], card);
       }
 
       forgetMissingCards(gs);
 
+      gs.pushHalos = removedFromOpp.map(o => ({ ownerId: o.ownerId, index: o.idx }));
+      gs.fireHalos = [];
       gs.fire.responses[myId] = 'burned';
       gs.fire.queue = gs.fire.queue.slice(1);
+      didValidBurn = true;
+      // Animation event for observers
+      gs.fireAnimEvent = {
+        actorId: myId,
+        burned: freshSelection.map(s => ({ ownerId: s.ownerId, index: s.index })),
+        pushed: removedFromOpp.map((o, i) => ({
+          fromOwnerId: myId,
+          fromIndex: remainingMySlots2[i],
+          toOwnerId: o.ownerId,
+          toIndex: o.idx
+        })).filter(p => p.fromIndex !== undefined)
+      };
 
       const totalBurned = removedFromSelf.length + removedFromOpp.length;
-
-      // ── CASE 1: matched fire value (any count) — clean burn ──
       if (matchesFireValue) {
         gs.lastAction = `🔥 ${myName} burned ${totalBurned}x ${fireValue}(s) — clean burn!`;
       } else if (freshSelection.length >= 2) {
-        // ── CASE 2: different value, 2+ cards — new fire with new value ──
         gs.fire.burnedValue = allVals[0];
         gs.lastAction = `🔥 ${myName} started a new fire with ${totalBurned}x ${allVals[0]}(s)! Fire spreads!`;
       } else {
-        // ── Single card that doesn't match fire value — treat as mismatch ──
-        // Undo: restore nulled slots back to their cards
-        for (const card of removedFromSelf) {
-          // Find the slot we nulled and restore it
-          const idx = freshSelection.find(s => s.ownerId === myId)?.index;
-          if (idx !== undefined) gs.hands[myId][idx] = card;
-        }
+        // Single card, wrong value — undo
+        const idx = freshSelection.find(s => s.ownerId === myId)?.index;
+        for (const card of removedFromSelf) { if (idx !== undefined) gs.hands[myId][idx] = card; }
         for (const { card, ownerId, idx } of removedFromOpp) gs.hands[ownerId][idx] = card;
-        // Remove them from discard (they were just pushed)
         gs.discard.splice(gs.discard.length - (removedFromSelf.length + removedFromOpp.length));
-        // Penalty cards append to new slots
         reshuffleDeckIfNeeded(gs);
         const p1 = gs.deck.pop();
         reshuffleDeckIfNeeded(gs);
         const p2 = gs.deck.pop();
         if (p1) addCardToHand(gs.hands[myId], p1);
         if (p2) addCardToHand(gs.hands[myId], p2);
+        gs.pushHalos = [];
+        didValidBurn = false;
         gs.lastAction = `🔥 ${myName} tried to burn a single non-matching card — burn failed! Cards kept, drew 2 penalty cards!`;
       }
 
       _checkFireDone(gs);
     });
+
+    if (didValidBurn) {
+      playFireBurnAnimation(burnedSlots2, pushedMoves2);
+      setTimeout(() => { if (gameState) mutate(gs => { gs.pushHalos = []; }); }, 2200);
+    }
     fireSelection = [];
   }
 }
@@ -2629,6 +2821,9 @@ function _checkFireDone(gs) {
 
 function advanceTurn(gs) {
   gs.swapHalos = []; // clear halos when turn moves on
+  gs.fireHalos = [];
+  gs.fireAnimEvent = null;
+  gs.pushHalos = [];
   gs.peekIndicator = null; // clear peek indicator
   tempPeekCard = null; // clear any lingering peek
 
@@ -2701,6 +2896,9 @@ async function nextRound() {
     gs.initialPeekDone = createInitialPeekState(players);
     gs.fire = null;
     gs.swapHalos = [];
+    gs.fireHalos = [];
+        gs.fireAnimEvent = null;
+    gs.pushHalos = [];
     gs.roundScores = null;
     gs.rawHandScores = null;
     gs.revealedHands = false;
