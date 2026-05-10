@@ -942,10 +942,9 @@
 <!-- OVERLAYS -->
 <div class="overlay" id="scoreOverlay">
   <div class="overlay-box">
-    <h2 id="overlayTitle">Round Over</h2>
+    <h2 id="overlayTitle">Game Over</h2>
     <ul class="score-list" id="scoreList"></ul>
-    <button class="btn btn-primary" id="nextRoundBtn" onclick="nextRound()" style="margin-top:16px">Next Round</button>
-    <button class="btn btn-secondary" id="newGameBtn" onclick="backToLobby()" style="display:none;margin-top:8px">Back to Lobby</button>
+    <button class="btn btn-primary" id="playAgainBtn" onclick="backToLobby()" style="margin-top:16px">Play Again</button>
   </div>
 </div>
 
@@ -981,7 +980,7 @@
     <div class="wc-score" id="wSubtitle">—</div>
     <div class="wc-divider"></div>
     <div class="wc-scores" id="wScores"></div>
-    <button class="wc-cta" onclick="dismissWinnerAnim()">Back to Lobby</button>
+    <button class="wc-cta" onclick="dismissWinnerAnim()">Play Again</button>
   </div>
 </div>
 
@@ -1700,7 +1699,7 @@ function renderGame(gs) {
     }
 
     return `<div class="opponent-zone">
-      <div class="opponent-name">${isTurn ? '<span class="turn-indicator"></span>' : ''}${escHtml(p.name)}</div>
+      <div class="opponent-name">${isTurn ? '<span class="turn-indicator"></span>' : ''}${escHtml(p.name)}${gs.phase === 'end' ? ` <span style="font-size:9px;color:var(--gold-dark);margin-left:4px">${gs.scores[p.id] ?? 0}pts</span>` : ''}</div>
       ${topCards.length ? `<div class="opponent-hand" style="margin-bottom:5px;opacity:0.75">${topCards.join('')}</div>` : ''}
       <div class="opponent-hand">${(bottomCards.length ? bottomCards : topCards).join('')}</div>
       ${topCards.length && bottomCards.length ? `<div class="pov-label">← near you →</div>` : ''}
@@ -1815,7 +1814,12 @@ function renderGame(gs) {
 
   // My name + score
   document.getElementById('myNameLabel').textContent = myName || 'You';
-  document.getElementById('myScoreLabel').textContent = `Score: ${gs.scores?.[myId] ?? 0}`;
+  const myFinalScore = gs.scores?.[myId] ?? 0;
+  const myIsWinner = gs.phase === 'end' && gs.winner === myId;
+  const myScoreEl = document.getElementById('myScoreLabel');
+  myScoreEl.textContent = gs.phase === 'end' ? `${myIsWinner ? '👑 ' : ''}Score: ${myFinalScore}` : `Score: ${myFinalScore}`;
+  myScoreEl.style.color = myIsWinner ? 'var(--gold)' : '';
+  myScoreEl.style.fontWeight = myIsWinner ? '700' : '';
 
   // Actions
   renderActions(gs, isMyTurn, myHand);
@@ -2003,10 +2007,6 @@ function renderActions(gs, isMyTurn, myHand) {
     // Player completed their action — show End Turn, halos are visible to everyone
     msg.textContent = 'Action complete. End your turn when ready.';
     btns.innerHTML = `<button class="btn btn-end-turn btn" onclick="endTurn()">⚔ End Turn</button>`;
-    // Show Call CABO button if CABO hasn't been called yet
-    if (!gs.cabo && gs.phase !== 'end') {
-      btns.innerHTML += `<button class="btn btn-danger" onclick="callCabo()">Call CABO</button>`;
-    }
     return;
   }
 
@@ -2014,6 +2014,10 @@ function renderActions(gs, isMyTurn, myHand) {
     const activeName = gs.players.find(p => p.id === gs.currentTurn)?.name || '?';
     msg.textContent = `Waiting for ${activeName} to end their turn…`;
     return;
+  }
+
+  if (gs.phase !== 'end' && !gs.cabo && isMyTurn && gs.phase === 'done') {
+    btns.innerHTML += `<button class="btn btn-danger" onclick="callCabo()">Call CABO</button>`;
   }
 }
 
@@ -2671,14 +2675,10 @@ function endRound(gs) {
   gs.rawHandScores = rawScores;  // actual card totals before cabo penalty/bonus
   gs.revealedHands = true;       // signal all clients to show cards face-up
   gs.lastAction = 'Round over!';
-  const losers = gs.players.filter(p => gs.scores[p.id] >= 100);
-  if (losers.length > 0) {
-    const winner = gs.players.reduce((a, b) => gs.scores[a.id] < gs.scores[b.id] ? a : b);
-    gs.gameOver = true;
-    gs.winner = winner.id;
-  } else {
-    gs.gameOver = false;
-  }
+  // Single-round game: always end after round 1 — lowest score wins
+  const winner = gs.players.reduce((a, b) => gs.scores[a.id] < gs.scores[b.id] ? a : b);
+  gs.gameOver = true;
+  gs.winner = winner.id;
   gs.phase = 'end';
 }
 
@@ -2727,40 +2727,25 @@ function showScoreOverlay(gs) {
   const overlay = document.getElementById('scoreOverlay');
   const title = document.getElementById('overlayTitle');
   const list = document.getElementById('scoreList');
-  const nextBtn = document.getElementById('nextRoundBtn');
-  const newBtn = document.getElementById('newGameBtn');
   const rs = gs.roundScores || {};
   const sorted = [...gs.players].sort((a, b) => (gs.scores[a.id] || 0) - (gs.scores[b.id] || 0));
   const rawScores = gs.rawHandScores || {};
   list.innerHTML = sorted.map(p => {
-    const isWinner = gs.gameOver && gs.winner === p.id;
+    const isWinner = gs.winner === p.id;
     const isCabo = gs.cabo === p.id;
     const handPts = rawScores[p.id] ?? (rs[p.id] || 0);
     const roundPts = rs[p.id] || 0;
-    const total = gs.scores[p.id] || 0;
     const penaltyNote = isCabo && roundPts > handPts ? ` <span style="color:#f97316;font-size:10px">(×2 penalty)</span>` : '';
     const bonusNote = isCabo && roundPts === 0 && handPts > 0 ? ` <span style="color:#6abf70;font-size:10px">(lowest!)</span>` : '';
     return `<li class="${isWinner ? 'winner' : ''}">
-      <span>${escHtml(p.name)}${isCabo ? ' ⚔️' : ''}</span>
-      <span>Hand: ${handPts}${penaltyNote}${bonusNote} &nbsp;+${roundPts} &nbsp; Total: ${total}</span>
+      <span>${isWinner ? '👑 ' : ''}${escHtml(p.name)}${isCabo ? ' ⚔️' : ''}</span>
+      <span>Hand: ${handPts}${penaltyNote}${bonusNote} &nbsp; Score: ${roundPts}</span>
     </li>`;
   }).join('');
-  if (gs.gameOver) {
-    nextBtn.style.display = 'none';
-    newBtn.style.display = 'block';
-    const w = gs.players.find(p => p.id === gs.winner);
-    title.textContent = `⚔️ ${w?.name || '?'} Wins!`;
-    // Flash winner name across all screens
-    showWinnerFlash(w?.name || '?');
-    // Fire winner animation — short delay so the score overlay renders first
-    setTimeout(() => showWinnerAnimation(gs), 800);
-  } else {
-    title.textContent = `Round ${gs.round} Results`;
-    nextBtn.style.display = 'block';
-    nextBtn.disabled = !isHost;
-    nextBtn.textContent = isHost ? 'Next Round' : 'Waiting for host...';
-    newBtn.style.display = 'none';
-  }
+  const w = gs.players.find(p => p.id === gs.winner);
+  title.textContent = `⚔️ ${w?.name || '?'} Wins!`;
+  showWinnerFlash(w?.name || '?');
+  setTimeout(() => showWinnerAnimation(gs), 800);
   overlay.classList.add('show');
 }
 
@@ -3146,7 +3131,7 @@ function playSwapAnimation(elIdA, elIdB, onDone) {
     // Populate card content
     document.getElementById('wName').textContent = winnerPlayer.name;
     document.getElementById('wSubtitle').textContent =
-      `${gs.scores[winnerPlayer.id]} pts · Round ${gs.round}`;
+      `${gs.scores[winnerPlayer.id]} pts · Lowest score wins`;
 
     const sorted = [...gs.players].sort((a, b) => (gs.scores[a.id] || 0) - (gs.scores[b.id] || 0));
     document.getElementById('wScores').innerHTML = sorted.map(p => `
