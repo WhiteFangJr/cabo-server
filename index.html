@@ -2007,6 +2007,10 @@ function renderActions(gs, isMyTurn, myHand) {
     // Player completed their action — show End Turn, halos are visible to everyone
     msg.textContent = 'Action complete. End your turn when ready.';
     btns.innerHTML = `<button class="btn btn-end-turn btn" onclick="endTurn()">⚔ End Turn</button>`;
+    // Show Call CABO button if CABO hasn't been called yet
+    if (!gs.cabo && gs.phase !== 'end') {
+      btns.innerHTML += `<button class="btn btn-danger" onclick="callCabo()">Call CABO</button>`;
+    }
     return;
   }
 
@@ -2014,10 +2018,6 @@ function renderActions(gs, isMyTurn, myHand) {
     const activeName = gs.players.find(p => p.id === gs.currentTurn)?.name || '?';
     msg.textContent = `Waiting for ${activeName} to end their turn…`;
     return;
-  }
-
-  if (gs.phase !== 'end' && !gs.cabo && isMyTurn && gs.phase === 'done') {
-    btns.innerHTML += `<button class="btn btn-danger" onclick="callCabo()">Call CABO</button>`;
   }
 }
 
