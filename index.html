@@ -1860,18 +1860,18 @@ function renderActions(gs, isMyTurn, myHand) {
 
     } else if (ability === 'blind_swap') {
       // J: pick opponent card → pick your card → swap, no reveal
-      if (!abilityTarget || abilityTarget.type === 'blind_swap') {
+      if (!abilityTarget) abilityTarget = { type: 'blind_swap' };
+      if (abilityTarget.type === 'blind_swap') {
         msg.innerHTML = `${preview}<div>⚔️ <strong>Blind Swap (J):</strong> Select an opponent's card to swap.</div>`;
-        abilityTarget = { type: 'blind_swap' };
       } else if (abilityTarget.type === 'blind_swap_own') {
         msg.innerHTML = `${preview}<div>⚔️ Now select <strong>your</strong> card to swap out.</div>`;
       }
 
     } else if (ability === 'swap_peek') {
       // Q: pick opponent card → pick your card → swap → reveal what you received
-      if (!abilityTarget || abilityTarget.type === 'swap_peek') {
+      if (!abilityTarget) abilityTarget = { type: 'swap_peek' };
+      if (abilityTarget.type === 'swap_peek') {
         msg.innerHTML = `${preview}<div>👁 <strong>Swap & Peek (Q):</strong> Select an opponent's card to swap. You'll see what you receive.</div>`;
-        abilityTarget = { type: 'swap_peek' };
       } else if (abilityTarget.type === 'swap_peek_own') {
         msg.innerHTML = `${preview}<div>👁 Now select <strong>your</strong> card to swap out.</div>`;
       }
