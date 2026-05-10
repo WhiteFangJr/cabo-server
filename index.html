@@ -543,6 +543,33 @@
   body:not(.dealing) #gameScreen .action-bar,
   body:not(.dealing) #gameScreen .game-log { opacity: 1; transition: opacity 0.5s 0.3s; }
 
+  #winnerStage {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    background: rgba(13, 31, 15, 0.92);
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  #winnerStage.show { display: flex; }
+  #winnerCloseBtn {
+    position: absolute;
+    top: 18px; right: 22px;
+    background: rgba(201,168,76,0.1);
+    border: 1px solid rgba(201,168,76,0.35);
+    color: var(--gold);
+    font-size: 20px;
+    line-height: 1;
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 20;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s, color 0.2s;
+  }
+  #winnerCloseBtn:hover { background: rgba(201,168,76,0.25); color: var(--gold-light); }
   #winnerStage canvas#wRaysCanvas {
     position: absolute;
     inset: 0;
@@ -910,6 +937,23 @@
 
 <!-- SWAP ANIMATION OVERLAY -->
 <div id="swapOverlay"></div>
+
+<!-- WINNER ANIMATION OVERLAY -->
+<div id="winnerStage">
+  <button id="winnerCloseBtn" onclick="dismissWinnerAnim()" title="Close" aria-label="Close victory screen">&#x2715;</button>
+  <canvas id="wRaysCanvas"></canvas>
+  <div id="wRing"></div>
+  <div id="wRing2"></div>
+  <div id="wCrown">&#x1F451;</div>
+  <div id="wCard">
+    <div class="wc-eyebrow">Victory</div>
+    <div class="wc-name" id="wName">&mdash;</div>
+    <div class="wc-score" id="wSubtitle">&mdash;</div>
+    <div class="wc-divider"></div>
+    <div class="wc-scores" id="wScores"></div>
+    <button class="wc-cta" onclick="dismissWinnerAnim()">Play Again</button>
+  </div>
+</div>
 
 <script>
 // ═══════════════════════════════════════════
@@ -1754,7 +1798,14 @@ function renderGame(gs) {
   // Log
   if (gs.lastAction) addLog(gs.lastAction);
 
-  // Score overlay
+  // Trigger winner screens once when game ends
+  if (gs.phase === 'end' && gs.winner && !window._winnerShown) {
+    window._winnerShown = true;
+    const w = gs.players.find(p => p.id === gs.winner);
+    showWinnerFlash(w?.name || '?');
+    setTimeout(() => showWinnerAnimation(gs), 800);
+  }
+  if (gs.phase !== 'end') window._winnerShown = false;
 
   renderDebugState(gs);
 }
@@ -2937,6 +2988,143 @@ function playSwapAnimation(elIdA, elIdB, onDone) {
     }, 100);
   });
 }
+
+
+// ═══════════════════════════════════════════
+// WINNER ANIMATION
+// ═══════════════════════════════════════════
+(function () {
+  let _wAnimId = null;
+  let _wRunning = false;
+
+  function _wSetStyle(el, props) { Object.assign(el.style, props); }
+
+  function _wSpawnParticles(stage) {
+    const cx = stage.offsetWidth / 2;
+    const cy = stage.offsetHeight / 2;
+    for (let i = 0; i < 60; i++) {
+      const p = document.createElement('div');
+      p.className = 'w-particle';
+      const size = 3 + Math.random() * 5;
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 80 + Math.random() * 200;
+      const hue = Math.random() < 0.6
+        ? `rgba(201,${120 + Math.floor(Math.random() * 80)},${20 + Math.floor(Math.random() * 40)},1)`
+        : `rgba(255,255,${180 + Math.floor(Math.random() * 75)},1)`;
+      p.style.cssText = `width:${size}px;height:${size}px;background:${hue};left:${cx}px;top:${cy}px;border-radius:${Math.random() < 0.3 ? '2px' : '50%'};`;
+      stage.appendChild(p);
+      const delay = 60 + Math.random() * 200;
+      const dur = 700 + Math.random() * 600;
+      const tx = Math.cos(angle) * speed;
+      const ty = Math.sin(angle) * speed;
+      const rot = (Math.random() - 0.5) * 720;
+      setTimeout(() => {
+        p.style.transition = `all ${dur}ms cubic-bezier(0.2,0.8,0.4,1)`;
+        p.style.opacity = '1';
+        p.style.transform = `translate(${tx}px,${ty}px) rotate(${rot}deg) scale(0.2)`;
+        p.style.left = (cx + tx) + 'px';
+        p.style.top  = (cy + ty) + 'px';
+        setTimeout(() => { p.style.opacity = '0'; }, dur * 0.5);
+        setTimeout(() => p.remove(), dur + 100);
+      }, delay);
+    }
+  }
+
+  function _wAnimateRays(canvas, ctx, startTime) {
+    const now = performance.now();
+    const t = Math.min((now - startTime) / 1400, 1);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const cx = canvas.width / 2, cy = canvas.height / 2;
+    const maxR = Math.hypot(cx, cy) * 1.1;
+    const opacity = t < 0.3 ? t / 0.3 : t < 0.7 ? 1 : 1 - (t - 0.7) / 0.3;
+    for (let i = 0; i < 16; i++) {
+      const base = (i / 16) * Math.PI * 2;
+      const sp = 0.06;
+      const a1 = base - sp, a2 = base + sp;
+      const ir = 60 + Math.sin(t * Math.PI * 2 + i) * 10;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(a1) * ir, cy + Math.sin(a1) * ir);
+      ctx.lineTo(cx + Math.cos(a1) * maxR, cy + Math.sin(a1) * maxR);
+      ctx.lineTo(cx + Math.cos(a2) * maxR, cy + Math.sin(a2) * maxR);
+      ctx.lineTo(cx + Math.cos(a2) * ir, cy + Math.sin(a2) * ir);
+      ctx.closePath();
+      const grad = ctx.createRadialGradient(cx, cy, ir, cx, cy, maxR);
+      grad.addColorStop(0, `rgba(201,168,76,${0.18 * opacity})`);
+      grad.addColorStop(1, `rgba(201,168,76,0)`);
+      ctx.fillStyle = grad;
+      ctx.fill();
+    }
+    if (t < 1) _wAnimId = requestAnimationFrame(() => _wAnimateRays(canvas, ctx, startTime));
+    else ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+
+  window.showWinnerAnimation = function (gs) {
+    const winnerPlayer = gs.players.find(p => p.id === gs.winner);
+    if (!winnerPlayer) return;
+
+    const stage  = document.getElementById('winnerStage');
+    const canvas = document.getElementById('wRaysCanvas');
+    const ctx    = canvas.getContext('2d');
+    const ring   = document.getElementById('wRing');
+    const ring2  = document.getElementById('wRing2');
+    const crown  = document.getElementById('wCrown');
+    const card   = document.getElementById('wCard');
+
+    document.getElementById('wName').textContent = winnerPlayer.name;
+    document.getElementById('wSubtitle').textContent =
+      `${gs.scores[winnerPlayer.id]} pts · Lowest score wins`;
+
+    const sorted = [...gs.players].sort((a, b) => (gs.scores[a.id] || 0) - (gs.scores[b.id] || 0));
+    document.getElementById('wScores').innerHTML = sorted.map(p => `
+      <div class="wc-row${p.id === gs.winner ? ' winner-row' : ''}">
+        <span>${p.id === gs.winner ? '⚔ ' : ''}${escHtml(p.name)}</span>
+        <span>${gs.scores[p.id] || 0}</span>
+      </div>`).join('');
+
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+    stage.classList.add('show');
+
+    if (_wRunning) return;
+    _wRunning = true;
+
+    cancelAnimationFrame(_wAnimId);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    _wSetStyle(canvas, { opacity: '0' });
+    _wSetStyle(card,   { opacity: '0', transform: 'translate(-50%,-50%) scale(0.6)', transition: 'none' });
+    _wSetStyle(crown,  { opacity: '0', transform: 'translate(-50%,-50%) scale(0)',   transition: 'none' });
+    _wSetStyle(ring,   { opacity: '0', transform: 'translate(-50%,-50%) scale(0)',   transition: 'none' });
+    _wSetStyle(ring2,  { opacity: '0', transform: 'translate(-50%,-50%) scale(0)',   transition: 'none' });
+
+    setTimeout(() => { canvas.style.opacity = '1'; _wAnimateRays(canvas, ctx, performance.now()); }, 80);
+    setTimeout(() => {
+      _wSetStyle(ring,  { transition: 'transform 700ms cubic-bezier(0.2,0.8,0.35,1), opacity 200ms ease', opacity: '1', transform: 'translate(-50%,-50%) scale(1)' });
+      _wSetStyle(ring2, { transition: 'transform 600ms cubic-bezier(0.2,0.8,0.35,1) 80ms, opacity 200ms ease 80ms', opacity: '1', transform: 'translate(-50%,-50%) scale(1)' });
+    }, 80);
+    setTimeout(() => {
+      _wSetStyle(crown, { transition: 'opacity 80ms ease, transform 320ms cubic-bezier(0.3,1.5,0.5,1)', opacity: '1', transform: 'translate(-50%,-50%) scale(1.15)' });
+      setTimeout(() => { _wSetStyle(crown, { transition: 'transform 200ms ease', transform: 'translate(-50%,-50%) scale(1)' }); }, 320);
+    }, 180);
+    setTimeout(() => _wSpawnParticles(stage), 220);
+    setTimeout(() => {
+      _wSetStyle(card, { transition: 'opacity 420ms ease, transform 500ms cubic-bezier(0.2,0.8,0.35,1)', opacity: '1', transform: 'translate(-50%,-52%) scale(1)' });
+    }, 440);
+    setTimeout(() => {
+      _wSetStyle(crown, { transition: 'transform 900ms cubic-bezier(0.3,0.8,0.5,1), opacity 600ms ease', transform: 'translate(-50%,-220%) scale(0.65)', opacity: '0.6' });
+    }, 800);
+    setTimeout(() => {
+      _wSetStyle(ring,  { transition: 'opacity 600ms ease', opacity: '0' });
+      _wSetStyle(ring2, { transition: 'opacity 600ms ease', opacity: '0' });
+      _wRunning = false;
+    }, 1200);
+  };
+
+  window.dismissWinnerAnim = function () {
+    const stage = document.getElementById('winnerStage');
+    stage.classList.remove('show');
+    backToLobby();
+  };
+})();
 
 
 // Enter key support
