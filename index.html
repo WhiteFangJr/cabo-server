@@ -2025,6 +2025,48 @@ function renderActions(gs, isMyTurn, myHand) {
     window._caboWindowDeadline = null;
   }
 
+  // ── CABO CALL WINDOW — post-fire, prev player gets 5s to call CABO ──
+  if (gs.phase === 'cabo_call_window' && gs.caboCallWindow) {
+    const forId = gs.caboCallWindow.forPlayerId;
+    const forName = gs.players.find(p => p.id === forId)?.name || '?';
+    const isMe = forId === myId;
+    if (!window._caboCallWindowDeadline) {
+      window._caboCallWindowDeadline = Date.now() + (gs.caboCallWindow.durationMs || 5000);
+      if (window._caboCallWindowTimer) clearInterval(window._caboCallWindowTimer);
+      window._caboCallWindowTimer = setInterval(() => {
+        if (!gameState || gameState.phase !== 'cabo_call_window') {
+          clearInterval(window._caboCallWindowTimer); window._caboCallWindowTimer = null;
+          window._caboCallWindowDeadline = null; return;
+        }
+        if (Date.now() >= window._caboCallWindowDeadline) {
+          clearInterval(window._caboCallWindowTimer); window._caboCallWindowTimer = null;
+          window._caboCallWindowDeadline = null;
+          closeCaboCallWindow();
+        } else {
+          renderGame(gameState);
+        }
+      }, 250);
+    }
+    const timeLeft = Math.max(0, Math.ceil((window._caboCallWindowDeadline - Date.now()) / 1000));
+    if (isMe) {
+      msg.innerHTML = `<div class="fire-banner" style="border-color:rgba(201,168,76,0.6);background:linear-gradient(135deg,rgba(60,40,0,0.97),rgba(30,15,0,0.99))">
+        <div class="fire-banner-title" style="color:var(--gold)">⚔️ Call CABO? — ${timeLeft}s</div>
+        <div class="fire-banner-sub">The fire is out. You have ${timeLeft}s to call CABO before the next player draws!</div>
+      </div>`;
+      btns.innerHTML = `<button class="btn btn-danger" style="animation:pulse 0.8s infinite alternate" onclick="callCaboFromWindow()">⚔️ Call CABO!</button>
+        <button class="btn btn-secondary" onclick="closeCaboCallWindow()">Skip</button>`;
+    } else {
+      msg.innerHTML = `<div class="fire-banner" style="border-color:rgba(201,168,76,0.4);background:linear-gradient(135deg,rgba(40,30,0,0.95),rgba(20,10,0,0.98))">
+        <div class="fire-banner-title" style="color:var(--gold-dark)">⏳ Waiting — ${timeLeft}s</div>
+        <div class="fire-banner-sub"><strong>${escHtml(forName)}</strong> may call CABO…</div>
+      </div>`;
+    }
+    return;
+  } else if (window._caboCallWindowTimer) {
+    clearInterval(window._caboCallWindowTimer); window._caboCallWindowTimer = null;
+    window._caboCallWindowDeadline = null;
+  }
+
   // ── FIRE PHASE ──
   if (gs.phase === 'fire' && gs.fire) {
     const fire = gs.fire;
@@ -2513,15 +2555,37 @@ async function closeCaboBurnWindow() {
   await mutate(gs => { endRound(gs); });
 }
 
+async function closeCaboCallWindow() {
+  const gs = gameState;
+  if (!gs || gs.phase !== 'cabo_call_window') return;
+  await mutate(gs => { gs.phase = 'draw'; gs.caboCallWindow = null; });
+}
+
+async function callCaboFromWindow() {
+  const gs = gameState;
+  if (!gs || gs.phase !== 'cabo_call_window') return;
+  if (gs.caboCallWindow?.forPlayerId !== myId) return;
+  await mutate(gs => {
+    gs.cabo = myId;
+    gs.caboLastRound = true;
+    gs.phase = 'draw';
+    gs.caboCallWindow = null;
+    gs.lastAction = `⚔️ ${myName} called CABO!`;
+  });
+  showToast('You called CABO! One more round for everyone else.');
+}
+
 async function startFire() {
   const gs = gameState;
   if (!gs || gs.phase === 'end') return;
   if (gs.phase === 'fire') return;
   if (gs.phase !== 'burn_window' && gs.phase !== 'cabo_burn_window') return;
   const isCaboFinal = gs.phase === 'cabo_burn_window';
+  const prevPlayerId = gs.gameState?.burnWindow?.prevPlayerId || null; // not available here; read inside mutate
   fireSelection = [];
   const queue = gs.players.filter(p => p.id !== myId).map(p => p.id);
   await mutate(gs => {
+    const prevPlayer = gs.burnWindow?.prevPlayerId || null;
     gs.fire = {
       starterId: myId,
       burnedValue: null,
@@ -2530,6 +2594,7 @@ async function startFire() {
       queue,
       responses: {},
       done: false,
+      prevPlayerId: prevPlayer,
     };
     gs.phase = 'fire';
     gs.burnWindow = null;
@@ -2912,12 +2977,18 @@ function _checkFireDone(gs) {
   if (gs.fire.queue.length === 0) {
     gs.fire.done = true;
     gs.lastAction = (gs.lastAction || '') + ' Fire extinguished.';
+    const prevPlayerId = gs.fire.prevPlayerId || null;
     gs.fire = null;
     // If fire was started during the cabo final burn window, end the round now
     if (gs._fireStartedInCaboBurnWindow) {
       gs._fireStartedInCaboBurnWindow = false;
       endRound(gs);
+    } else if (prevPlayerId && !gs.cabo) {
+      // Give the player whose turn just ended a 5s window to call CABO
+      gs.phase = 'cabo_call_window';
+      gs.caboCallWindow = { forPlayerId: prevPlayerId, durationMs: 5000 };
     } else {
+      // cabo already called or no prevPlayer — go straight to draw
       gs.phase = 'draw';
     }
   }
@@ -2950,12 +3021,13 @@ function advanceTurn(gs) {
     gs.lastAction = `⚔️ Last turn done! Final fire window before scores are revealed.`;
     return;
   }
+  const prevPlayerId = gs.currentTurn; // capture before overwriting
   gs.currentTurn = nextPlayer.id;
   gs.turnCount = (gs.turnCount || 0) + 1;
 
   // 5-second window for anyone to start a fire before next turn begins
   gs.phase = 'burn_window';
-  gs.burnWindow = { forPlayer: gs.currentTurn, durationMs: 5000 };
+  gs.burnWindow = { forPlayer: gs.currentTurn, prevPlayerId, durationMs: 5000 };
 }
 
 function endRound(gs) {
@@ -3013,6 +3085,7 @@ async function nextRound() {
     gs.revealedHands = false;
     gs.caboBurnWindow = null;
     gs._fireStartedInCaboBurnWindow = false;
+    gs.caboCallWindow = null;
     gs.lastAction = 'New round started!';
   });
   selectedHandIndex = -1;
@@ -3020,6 +3093,8 @@ async function nextRound() {
   abilityTarget = null;
   window._caboWindowDeadline = null;
   if (window._caboWindowTimer) { clearInterval(window._caboWindowTimer); window._caboWindowTimer = null; }
+  window._caboCallWindowDeadline = null;
+  if (window._caboCallWindowTimer) { clearInterval(window._caboCallWindowTimer); window._caboCallWindowTimer = null; }
 }
 
 // ═══════════════════════════════════════════
