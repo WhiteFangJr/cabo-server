@@ -674,6 +674,93 @@
   .w-particle {
     position: absolute; border-radius: 50%; pointer-events: none; opacity: 0;
   }
+
+  /* ── WINNER FLASH BANNER ── */
+  #winnerFlash {
+    display: none;
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%) scale(0.5);
+    z-index: 1500;
+    text-align: center;
+    pointer-events: none;
+    opacity: 0;
+  }
+  #winnerFlash.show {
+    display: block;
+    animation: winnerFlashAnim 3.2s ease forwards;
+  }
+  @keyframes winnerFlashAnim {
+    0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+    15%  { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
+    25%  { transform: translate(-50%, -50%) scale(1); }
+    70%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+  }
+  #winnerFlash .wf-inner {
+    background: linear-gradient(160deg, #0a1628 0%, #0d1f0f 100%);
+    border: 2px solid var(--gold);
+    border-radius: 12px;
+    padding: 24px 48px;
+    box-shadow: 0 0 60px rgba(201,168,76,0.5), 0 0 120px rgba(201,168,76,0.2);
+  }
+  #winnerFlash .wf-crown { font-size: 48px; display: block; margin-bottom: 4px; }
+  #winnerFlash .wf-name {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 32px; font-weight: 700;
+    color: var(--gold-light);
+    text-shadow: 0 0 30px rgba(201,168,76,0.8);
+    display: block;
+  }
+  #winnerFlash .wf-sub {
+    font-family: 'Cinzel', serif;
+    font-size: 12px; letter-spacing: 0.3em;
+    color: var(--gold-dark); text-transform: uppercase;
+    display: block; margin-top: 6px;
+  }
+
+  /* ── PEEK BADGE on opponent cards ── */
+  .peek-badge {
+    position: absolute;
+    top: -9px; left: 50%; transform: translateX(-50%);
+    background: #1d4ed8;
+    color: #fff;
+    font-family: 'Cinzel', serif;
+    font-size: 7px; font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 2px 5px;
+    border-radius: 3px;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 10;
+    box-shadow: 0 1px 6px rgba(29,78,216,0.5);
+    animation: peekPulse 0.8s ease-in-out infinite alternate;
+  }
+  @keyframes peekPulse {
+    0%   { box-shadow: 0 1px 6px rgba(29,78,216,0.5); }
+    100% { box-shadow: 0 1px 14px rgba(29,78,216,0.9); }
+  }
+
+  /* ── SWAP ANIMATION ── */
+  #swapOverlay {
+    display: none;
+    position: fixed; inset: 0;
+    z-index: 600;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  #swapOverlay.active { display: block; }
+  .swap-flying-card {
+    position: absolute;
+    width: 72px; height: 108px;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.65), 0 0 0 2px rgba(167,139,250,0.7);
+    pointer-events: none;
+    opacity: 0;
+    will-change: transform, left, top, opacity;
+  }
+  .swap-flying-card svg { width: 100%; height: 100%; display: block; }
 </style>
 </head>
 <body>
@@ -869,6 +956,18 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- WINNER FLASH BANNER (shown to all players) -->
+<div id="winnerFlash">
+  <div class="wf-inner">
+    <span class="wf-crown">👑</span>
+    <span class="wf-name" id="winnerFlashName"></span>
+    <span class="wf-sub">Wins the Game!</span>
+  </div>
+</div>
+
+<!-- SWAP ANIMATION OVERLAY -->
+<div id="swapOverlay"></div>
 
 <!-- WINNER ANIMATION OVERLAY -->
 <div id="winnerStage">
@@ -1556,7 +1655,7 @@ function renderGame(gs) {
         return `<div class="card small face-down${nearClass}" id="opp_${p.id}_${i}" style="opacity:0.18;cursor:default;pointer-events:none">${cardBackSVG()}</div>`;
       }
       const isPeeking = !!(tempPeekCard && tempPeekCard.ownerId === p.id && tempPeekCard.index === i);
-      const known = viewerMode || isPeeking || isKnownTo(myId, p.id, i);
+      const known = gs.revealedHands || viewerMode || isPeeking || isKnownTo(myId, p.id, i);
       const selected = fireSelection.some(s => s.ownerId === p.id && s.index === i);
       // Starter AND current responder can fire-select opponent cards
       const isFireStarter = gs.phase === 'fire' && gs.fire && gs.fire.starterId === myId && !gs.fire.burnedValue;
@@ -1575,9 +1674,16 @@ function renderGame(gs) {
       }
       const isHalo = (gs.swapHalos || []).some(h => h.ownerId === p.id && h.index === i);
       const haloClass = isHalo ? ' just-swapped' : '';
-      const badge = isHalo ? '<span class="swap-badge">NEW</span>' : '';
+      const isPeekedByOther = gs.peekIndicator && gs.peekIndicator.ownerId === p.id && gs.peekIndicator.index === i && gs.peekIndicator.peekerId !== myId;
+      const isPeekedBySelf = gs.peekIndicator && gs.peekIndicator.ownerId === p.id && gs.peekIndicator.index === i && gs.peekIndicator.peekerId === myId;
+      const peekerName = isPeekedByOther ? (gs.players.find(pl => pl.id === gs.peekIndicator.peekerId)?.name || '?') : '';
+      const hasBadge = isHalo || isPeekedByOther || isPeekedBySelf;
+      const badge = isHalo ? '<span class="swap-badge">NEW</span>'
+        : isPeekedByOther ? `<span class="peek-badge">👁 ${escHtml(peekerName)}</span>`
+        : isPeekedBySelf ? '<span class="peek-badge" style="background:#1e40af">👁 You</span>'
+        : '';
       const cardHtml = renderCardHtml(known ? c : null, known, `small${nearClass}${fireSelClass}${fireSel}${haloClass}`, `opp_${p.id}_${i}`, click);
-      return isHalo ? `<div style="position:relative;display:inline-block">${badge}${cardHtml}</div>` : cardHtml;
+      return hasBadge ? `<div style="position:relative;display:inline-block">${badge}${cardHtml}</div>` : cardHtml;
     };
 
     // POV layout: slots 0,1 are near the viewer (bottom row), slots 2+ are near the opponent (top row).
@@ -1648,7 +1754,7 @@ function renderGame(gs) {
       // During initial peek (before Begin), show bottom 2 cards face-up.
       // After Begin is pressed, all cards go face-down — players must rely on memory.
       const initialPeek = isInitialRevealVisible(gs, myId) && i >= 2;
-      const known = viewerMode || isPeekingOwn || isKnownTo(myId, myId, i) || initialPeek;
+      const known = gs.revealedHands || viewerMode || isPeekingOwn || isKnownTo(myId, myId, i) || initialPeek;
       const sel = selectedHandIndex === i ? ' selected' : '';
       const fireClass = myFireTurn ? ' fire-selectable' : '';
       const fireSel = fireSelection.some(s => s.ownerId === myId && s.index === i) ? ' fire-selected' : '';
@@ -1906,7 +2012,7 @@ function renderActions(gs, isMyTurn, myHand) {
     return;
   }
 
-  if (gs.phase !== 'end' && !gs.cabo && isMyTurn && gs.phase === 'draw') {
+  if (gs.phase !== 'end' && !gs.cabo && isMyTurn && gs.phase === 'done') {
     btns.innerHTML += `<button class="btn btn-danger" onclick="callCabo()">Call CABO</button>`;
   }
 }
@@ -1965,6 +2071,8 @@ async function selectHandCard(i) {
   const gs = gameState;
   if (!gs || gs.currentTurn !== myId) return;
   if (gs.phase === 'action') {
+    // Play swap animation between drawn-card preview and hand card
+    playSwapAnimation('drawnPreview', `my_${i}`, null);
     await mutate(gs => {
       const old = gs.hands[myId][i];
       gs.hands[myId][i] = gs.drawnCard;
@@ -2028,8 +2136,15 @@ async function spyCard(ownerId, index) {
     gs.drawnFrom = '';
     gs.phase = 'done';
     gs.swapHalos = [];
+    gs.peekIndicator = { peekerId: myId, ownerId, index };
     gs.lastAction = `${myName} spied on a card.`;
   });
+  // Auto-clear peek indicator after 4s (matches peek overlay timeout)
+  setTimeout(() => {
+    if (gameState?.peekIndicator?.peekerId === myId) {
+      mutate(gs => { gs.peekIndicator = null; });
+    }
+  }, 4000);
   abilityTarget = null;
 }
 
@@ -2056,6 +2171,9 @@ async function abilitySwapCommit(myIndex) {
 
   // Capture the card we'll receive before mutating, so we can show it after
   const receivedCard = gs.hands[oppId]?.[oppIndex];
+
+  // Play swap animation between the two card elements
+  playSwapAnimation(`my_${myIndex}`, `opp_${oppId}_${oppIndex}`, null);
 
   await mutate(gs => {
     const myCard  = gs.hands[myId][myIndex];
@@ -2108,8 +2226,17 @@ async function peekSwapOpp(oppId, oppIndex) {
 
   // Advance abilityTarget to the decision step
   abilityTarget = { type: 'peek_swap_decide', oppId, oppIndex };
-  // Mark as known so it stays visible while deciding
-  await mutate(gs => { markKnown(gs, myId, oppId, oppIndex); });
+  // Mark as known so it stays visible while deciding; also broadcast peek indicator
+  await mutate(gs => {
+    markKnown(gs, myId, oppId, oppIndex);
+    gs.peekIndicator = { peekerId: myId, ownerId: oppId, index: oppIndex };
+  });
+  // Auto-clear peek indicator after 4s
+  setTimeout(() => {
+    if (gameState?.peekIndicator?.peekerId === myId) {
+      mutate(gs => { gs.peekIndicator = null; });
+    }
+  }, 4000);
   // Re-render to show the "swap or skip" UI
   if (gameState) renderGame(gameState);
 }
@@ -2120,6 +2247,7 @@ async function peekSwapCommit(myIndex) {
   const { oppId, oppIndex } = abilityTarget;
   const gs = gameState;
   if (!gs || gs.currentTurn !== myId) return;
+  playSwapAnimation(`my_${myIndex}`, `opp_${oppId}_${oppIndex}`, null);
   await mutate(gs => {
     const myCard  = gs.hands[myId][myIndex];
     const oppCard = gs.hands[oppId][oppIndex];
@@ -2501,6 +2629,7 @@ function _checkFireDone(gs) {
 
 function advanceTurn(gs) {
   gs.swapHalos = []; // clear halos when turn moves on
+  gs.peekIndicator = null; // clear peek indicator
   tempPeekCard = null; // clear any lingering peek
 
   // Wipe ALL knownCards for ALL players on every turn end.
@@ -2527,17 +2656,20 @@ function advanceTurn(gs) {
 }
 
 function endRound(gs) {
-  const roundScores = {};
+  const rawScores = {};
   for (let p of gs.players) {
     const hand = gs.hands[p.id];
-    roundScores[p.id] = hand.reduce((sum, c) => sum + cardPoints(c), 0);
+    rawScores[p.id] = hand.filter(c => c).reduce((sum, c) => sum + cardPoints(c), 0);
   }
-  const callerScore = roundScores[gs.cabo];
-  const otherMin = Math.min(...gs.players.filter(p => p.id !== gs.cabo).map(p => roundScores[p.id]));
+  const roundScores = { ...rawScores };
+  const callerScore = rawScores[gs.cabo];
+  const otherMin = Math.min(...gs.players.filter(p => p.id !== gs.cabo).map(p => rawScores[p.id]));
   if (callerScore <= otherMin) roundScores[gs.cabo] = 0;
-  else roundScores[gs.cabo] *= 2;
+  else roundScores[gs.cabo] = callerScore * 2;
   for (let p of gs.players) gs.scores[p.id] = (gs.scores[p.id] || 0) + roundScores[p.id];
   gs.roundScores = roundScores;
+  gs.rawHandScores = rawScores;  // actual card totals before cabo penalty/bonus
+  gs.revealedHands = true;       // signal all clients to show cards face-up
   gs.lastAction = 'Round over!';
   const losers = gs.players.filter(p => gs.scores[p.id] >= 100);
   if (losers.length > 0) {
@@ -2578,6 +2710,8 @@ async function nextRound() {
     gs.fire = null;
     gs.swapHalos = [];
     gs.roundScores = null;
+    gs.rawHandScores = null;
+    gs.revealedHands = false;
     gs.lastAction = 'New round started!';
   });
   document.getElementById('scoreOverlay').classList.remove('show');
@@ -2597,17 +2731,29 @@ function showScoreOverlay(gs) {
   const newBtn = document.getElementById('newGameBtn');
   const rs = gs.roundScores || {};
   const sorted = [...gs.players].sort((a, b) => (gs.scores[a.id] || 0) - (gs.scores[b.id] || 0));
-  list.innerHTML = sorted.map(p => `<li class="${gs.gameOver && gs.winner === p.id ? 'winner' : ''}">
-    <span>${escHtml(p.name)}${gs.cabo === p.id ? ' (CABO)' : ''}</span>
-    <span>+${rs[p.id] || 0} &nbsp; Total: ${gs.scores[p.id] || 0}</span>
-  </li>`).join('');
+  const rawScores = gs.rawHandScores || {};
+  list.innerHTML = sorted.map(p => {
+    const isWinner = gs.gameOver && gs.winner === p.id;
+    const isCabo = gs.cabo === p.id;
+    const handPts = rawScores[p.id] ?? (rs[p.id] || 0);
+    const roundPts = rs[p.id] || 0;
+    const total = gs.scores[p.id] || 0;
+    const penaltyNote = isCabo && roundPts > handPts ? ` <span style="color:#f97316;font-size:10px">(×2 penalty)</span>` : '';
+    const bonusNote = isCabo && roundPts === 0 && handPts > 0 ? ` <span style="color:#6abf70;font-size:10px">(lowest!)</span>` : '';
+    return `<li class="${isWinner ? 'winner' : ''}">
+      <span>${escHtml(p.name)}${isCabo ? ' ⚔️' : ''}</span>
+      <span>Hand: ${handPts}${penaltyNote}${bonusNote} &nbsp;+${roundPts} &nbsp; Total: ${total}</span>
+    </li>`;
+  }).join('');
   if (gs.gameOver) {
     nextBtn.style.display = 'none';
     newBtn.style.display = 'block';
     const w = gs.players.find(p => p.id === gs.winner);
     title.textContent = `⚔️ ${w?.name || '?'} Wins!`;
+    // Flash winner name across all screens
+    showWinnerFlash(w?.name || '?');
     // Fire winner animation — short delay so the score overlay renders first
-    setTimeout(() => showWinnerAnimation(gs), 400);
+    setTimeout(() => showWinnerAnimation(gs), 800);
   } else {
     title.textContent = `Round ${gs.round} Results`;
     nextBtn.style.display = 'block';
@@ -2836,6 +2982,80 @@ function playDealAnimation(gs) {
 
   // Safety fallback: always clean up after max possible duration
   setTimeout(cleanup, STAGGER * total + CARD_DUR + 600);
+}
+
+// ═══════════════════════════════════════════
+// WINNER FLASH BANNER
+// ═══════════════════════════════════════════
+function showWinnerFlash(name) {
+  const el = document.getElementById('winnerFlash');
+  const nameEl = document.getElementById('winnerFlashName');
+  if (!el || !nameEl) return;
+  nameEl.textContent = name;
+  el.classList.remove('show');
+  void el.offsetWidth; // reflow to restart animation
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 3400);
+}
+
+// ═══════════════════════════════════════════
+// SWAP ANIMATION
+// ═══════════════════════════════════════════
+function playSwapAnimation(elIdA, elIdB, onDone) {
+  const overlay = document.getElementById('swapOverlay');
+  if (!overlay) { if (onDone) onDone(); return; }
+
+  const elA = document.getElementById(elIdA);
+  const elB = document.getElementById(elIdB);
+  if (!elA || !elB) { if (onDone) onDone(); return; }
+
+  const rA = elA.getBoundingClientRect();
+  const rB = elB.getBoundingClientRect();
+  const cAx = rA.left + rA.width / 2;
+  const cAy = rA.top  + rA.height / 2;
+  const cBx = rB.left + rB.width / 2;
+  const cBy = rB.top  + rB.height / 2;
+
+  overlay.innerHTML = '';
+  overlay.classList.add('active');
+
+  function makeFlyer(cx, cy, color) {
+    const el = document.createElement('div');
+    el.className = 'swap-flying-card';
+    el.innerHTML = cardBackSVG();
+    el.style.cssText = `left:${cx}px;top:${cy}px;transform:translate(-50%,-50%);opacity:0;
+      box-shadow:0 8px 28px rgba(0,0,0,0.65),0 0 0 2px ${color};`;
+    overlay.appendChild(el);
+    return el;
+  }
+
+  const flyA = makeFlyer(cAx, cAy, 'rgba(167,139,250,0.8)');
+  const flyB = makeFlyer(cBx, cBy, 'rgba(251,191,36,0.8)');
+  const DUR = 420;
+
+  requestAnimationFrame(() => {
+    [flyA, flyB].forEach(f => {
+      f.style.transition = `opacity 80ms ease`;
+      f.style.opacity = '1';
+    });
+    setTimeout(() => {
+      flyA.style.transition = `left ${DUR}ms cubic-bezier(0.4,0,0.2,1), top ${DUR}ms cubic-bezier(0.4,0,0.2,1), opacity 100ms ease`;
+      flyB.style.transition = `left ${DUR}ms cubic-bezier(0.4,0,0.2,1), top ${DUR}ms cubic-bezier(0.4,0,0.2,1), opacity 100ms ease`;
+      flyA.style.left = cBx + 'px';
+      flyA.style.top  = cBy + 'px';
+      flyB.style.left = cAx + 'px';
+      flyB.style.top  = cAy + 'px';
+      setTimeout(() => {
+        flyA.style.opacity = '0';
+        flyB.style.opacity = '0';
+        setTimeout(() => {
+          overlay.classList.remove('active');
+          overlay.innerHTML = '';
+          if (onDone) onDone();
+        }, 120);
+      }, DUR);
+    }, 100);
+  });
 }
 
 // ═══════════════════════════════════════════
