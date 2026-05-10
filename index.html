@@ -718,6 +718,29 @@
     100% { box-shadow: 0 1px 14px rgba(29,78,216,0.9); }
   }
 
+  /* ── CABO FROZEN — gold lock glow on the caller's cards ── */
+  .card.cabo-frozen {
+    border-color: var(--gold) !important;
+    box-shadow: 0 0 0 2px var(--gold), 0 0 14px 4px rgba(201,168,76,0.45), 0 6px 20px rgba(0,0,0,0.35) !important;
+    cursor: not-allowed !important;
+    pointer-events: none !important;
+  }
+  .cabo-frozen-label {
+    position: absolute;
+    top: -9px; left: 50%; transform: translateX(-50%);
+    background: linear-gradient(135deg, #8a6a20, #c9a84c);
+    color: #0d1f0f;
+    font-family: 'Cinzel', serif;
+    font-size: 7px; font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 2px 5px;
+    border-radius: 3px;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 10;
+    box-shadow: 0 1px 6px rgba(201,168,76,0.5);
+  }
+
   /* ── SWAP ANIMATION ── */
   #swapOverlay {
     display: none;
@@ -1706,10 +1729,13 @@ function renderGame(gs) {
       const isFireStarter = gs.phase === 'fire' && gs.fire && gs.fire.starterId === myId && !gs.fire.burnedValue;
       const isFireResponder = gs.phase === 'fire' && gs.fire && gs.fire.burnedValue && gs.fire.queue?.[0] === myId;
       const canFireSelectOpp = isFireStarter || isFireResponder;
-      const fireSelClass = canFireSelectOpp ? ' fire-selectable' : '';
+      // Cabo caller's cards are frozen — no one may interact with them
+      const isCaboFrozen = gs.cabo && gs.cabo === p.id && gs.phase !== 'end';
+      const fireSelClass = (canFireSelectOpp && !isCaboFrozen) ? ' fire-selectable' : '';
       const fireSel = selected ? ' fire-selected' : '';
       let click = '';
-      if (canFireSelectOpp) click = `toggleFireCard('${p.id}',${i})`;
+      if (isCaboFrozen) click = ''; // frozen — no interaction
+      else if (canFireSelectOpp) click = `toggleFireCard('${p.id}',${i})`;
       else if (gs.phase === 'ability' && abilityTarget) {
         const at = abilityTarget.type;
         if (at === 'spy')            click = `spyCard('${p.id}',${i})`;
@@ -1722,15 +1748,17 @@ function renderGame(gs) {
       const isFireHalo = (gs.fireHalos || []).some(h => h.ownerId === p.id && h.index === i);
       const isPushHalo = (gs.pushHalos || []).some(h => h.ownerId === p.id && h.index === i);
       const fireHaloClass = isFireHalo ? ' fire-burning' : (isPushHalo ? ' fire-pushed' : '');
+      const frozenClass = isCaboFrozen ? ' cabo-frozen' : '';
       const isPeekedByOther = gs.peekIndicator && gs.peekIndicator.ownerId === p.id && gs.peekIndicator.index === i && gs.peekIndicator.peekerId !== myId;
       const isPeekedBySelf = gs.peekIndicator && gs.peekIndicator.ownerId === p.id && gs.peekIndicator.index === i && gs.peekIndicator.peekerId === myId;
       const peekerName = isPeekedByOther ? (gs.players.find(pl => pl.id === gs.peekIndicator.peekerId)?.name || '?') : '';
-      const hasBadge = isHalo || isPeekedByOther || isPeekedBySelf;
-      const badge = isHalo ? '<span class="swap-badge">NEW</span>'
+      const hasBadge = isHalo || isPeekedByOther || isPeekedBySelf || isCaboFrozen;
+      const badge = isCaboFrozen ? '<span class="cabo-frozen-label">⚔ CABO</span>'
+        : isHalo ? '<span class="swap-badge">NEW</span>'
         : isPeekedByOther ? `<span class="peek-badge">👁 ${escHtml(peekerName)}</span>`
         : isPeekedBySelf ? '<span class="peek-badge" style="background:#1e40af">👁 You</span>'
         : '';
-      const cardHtml = renderCardHtml(known ? c : null, known, `small${nearClass}${fireSelClass}${fireSel}${haloClass}${fireHaloClass}`, `opp_${p.id}_${i}`, click);
+      const cardHtml = renderCardHtml(known ? c : null, known, `small${nearClass}${fireSelClass}${fireSel}${haloClass}${fireHaloClass}${frozenClass}`, `opp_${p.id}_${i}`, click);
       return hasBadge ? `<div style="position:relative;display:inline-block">${badge}${cardHtml}</div>` : cardHtml;
     };
 
@@ -1804,10 +1832,13 @@ function renderGame(gs) {
       const initialPeek = isInitialRevealVisible(gs, myId) && i >= 2;
       const known = gs.revealedHands || viewerMode || isPeekingOwn || isKnownTo(myId, myId, i) || initialPeek;
       const sel = selectedHandIndex === i ? ' selected' : '';
-      const fireClass = myFireTurn ? ' fire-selectable' : '';
+      const isMyCaboFrozen = gs.cabo && gs.cabo === myId && gs.phase !== 'end';
+      const fireClass = (myFireTurn && !isMyCaboFrozen) ? ' fire-selectable' : '';
       const fireSel = fireSelection.some(s => s.ownerId === myId && s.index === i) ? ' fire-selected' : '';
+      const myCaboFrozenClass = isMyCaboFrozen ? ' cabo-frozen' : '';
       let click = '';
-      if (myFireTurn) click = `toggleFireCard('${myId}',${i})`;
+      if (isMyCaboFrozen) click = ''; // frozen — no interaction
+      else if (myFireTurn) click = `toggleFireCard('${myId}',${i})`;
       else if (gs.phase === 'action') click = `selectHandCard(${i})`;
       else if (gs.phase === 'ability' && abilityTarget) {
         const at = abilityTarget.type;
@@ -1821,9 +1852,18 @@ function renderGame(gs) {
       const isFireHalo = (gs.fireHalos || []).some(h => h.ownerId === myId && h.index === i);
       const isPushHalo = (gs.pushHalos || []).some(h => h.ownerId === myId && h.index === i);
       const fireHaloClass = isFireHalo ? ' fire-burning' : (isPushHalo ? ' fire-pushed' : '');
-      const badge = isHalo ? '<span class="swap-badge">NEW</span>' : '';
-      const cardHtml = renderCardHtml(known ? c : null, known, sel + fireClass + fireSel + haloClass + fireHaloClass, `my_${i}`, click);
-      return isHalo ? `<div style="position:relative;display:inline-block">${badge}${cardHtml}</div>` : cardHtml;
+      // Peek indicator on own cards — peeked by self or by another player (spy on my card)
+      const isOwnPeekedBySelf = gs.peekIndicator && gs.peekIndicator.ownerId === myId && gs.peekIndicator.index === i && gs.peekIndicator.peekerId === myId;
+      const isOwnPeekedByOther = gs.peekIndicator && gs.peekIndicator.ownerId === myId && gs.peekIndicator.index === i && gs.peekIndicator.peekerId !== myId;
+      const ownPeekerName = isOwnPeekedByOther ? (gs.players.find(pl => pl.id === gs.peekIndicator.peekerId)?.name || '?') : '';
+      const hasBadgeOwn = isHalo || isMyCaboFrozen || isOwnPeekedBySelf || isOwnPeekedByOther;
+      const badge = isMyCaboFrozen ? '<span class="cabo-frozen-label">⚔ CABO</span>'
+        : isHalo ? '<span class="swap-badge">NEW</span>'
+        : isOwnPeekedBySelf ? '<span class="peek-badge" style="background:#1e40af">👁 You</span>'
+        : isOwnPeekedByOther ? `<span class="peek-badge">👁 ${escHtml(ownPeekerName)}</span>`
+        : '';
+      const cardHtml = renderCardHtml(known ? c : null, known, sel + fireClass + fireSel + haloClass + fireHaloClass + myCaboFrozenClass, `my_${i}`, click);
+      return hasBadgeOwn ? `<div style="position:relative;display:inline-block">${badge}${cardHtml}</div>` : cardHtml;
     };
     // Layout: render all slots in a fixed 2-column grid.
     // Slots 0,1 = row 1 (far from player, shown dimmed); slots 2,3 = row 2 (near player, shown at full opacity).
@@ -1951,6 +1991,38 @@ function renderActions(gs, isMyTurn, myHand) {
   } else if (window._burnWindowTimer) {
     clearInterval(window._burnWindowTimer); window._burnWindowTimer = null;
     window._burnWindowDeadline = null; window._burnWindowForPlayer = null;
+  }
+
+  // ── CABO FINAL BURN WINDOW ──
+  if (gs.phase === 'cabo_burn_window') {
+    // Use a local client-side deadline, reset once per cabo_burn_window entry
+    if (!window._caboWindowDeadline) {
+      window._caboWindowDeadline = Date.now() + (gs.caboBurnWindow?.durationMs || 5000);
+      if (window._caboWindowTimer) clearInterval(window._caboWindowTimer);
+      window._caboWindowTimer = setInterval(() => {
+        if (!gameState || gameState.phase !== 'cabo_burn_window') {
+          clearInterval(window._caboWindowTimer); window._caboWindowTimer = null;
+          window._caboWindowDeadline = null; return;
+        }
+        if (Date.now() >= window._caboWindowDeadline) {
+          clearInterval(window._caboWindowTimer); window._caboWindowTimer = null;
+          window._caboWindowDeadline = null;
+          closeCaboBurnWindow();
+        } else {
+          renderGame(gameState);
+        }
+      }, 250);
+    }
+    const timeLeft = Math.max(0, Math.ceil((window._caboWindowDeadline - Date.now()) / 1000));
+    msg.innerHTML = `<div class="fire-banner" style="border-color:rgba(201,168,76,0.6);background:linear-gradient(135deg,rgba(80,50,0,0.95),rgba(40,20,0,0.98))">
+      <div class="fire-banner-title" style="color:var(--gold)">⚔️ CABO! Final Fire Window — ${timeLeft}s</div>
+      <div class="fire-banner-sub">The round ends in ${timeLeft}s. Anyone may start one last fire now!</div>
+    </div>`;
+    btns.innerHTML = `<button class="btn btn-danger" style="animation:pulse 0.8s infinite alternate" onclick="startFire()">🔥 Start Fire!</button>`;
+    return;
+  } else if (window._caboWindowTimer) {
+    clearInterval(window._caboWindowTimer); window._caboWindowTimer = null;
+    window._caboWindowDeadline = null;
   }
 
   // ── FIRE PHASE ──
@@ -2287,6 +2359,15 @@ async function abilitySwapCommit(myIndex) {
   if (isSwapPeek && receivedCard) {
     // Show the card the player just received
     showPeek('You received:', receivedCard, myId, myIndex);
+    // Broadcast peek indicator so all players see the badge
+    await mutate(gs => {
+      gs.peekIndicator = { peekerId: myId, ownerId: myId, index: myIndex };
+    });
+    setTimeout(() => {
+      if (gameState?.peekIndicator?.peekerId === myId) {
+        mutate(gs => { gs.peekIndicator = null; });
+      }
+    }, 4000);
   }
   abilityTarget = null;
 }
@@ -2361,8 +2442,15 @@ async function peekOwnCard(i) {
     gs.drawnFrom = '';
     gs.phase = 'done';
     gs.swapHalos = [];
+    gs.peekIndicator = { peekerId: myId, ownerId: myId, index: i };
     gs.lastAction = `${myName} peeked at one of their cards.`;
   });
+  // Auto-clear peek indicator after 4s (matches peek overlay timeout)
+  setTimeout(() => {
+    if (gameState?.peekIndicator?.peekerId === myId) {
+      mutate(gs => { gs.peekIndicator = null; });
+    }
+  }, 4000);
 }
 
 async function skipAbility() {
@@ -2419,11 +2507,18 @@ async function closeBurnWindow() {
   await mutate(gs => { gs.phase = 'draw'; gs.burnWindow = null; });
 }
 
+async function closeCaboBurnWindow() {
+  const gs = gameState;
+  if (!gs || gs.phase !== 'cabo_burn_window') return;
+  await mutate(gs => { endRound(gs); });
+}
+
 async function startFire() {
   const gs = gameState;
   if (!gs || gs.phase === 'end') return;
   if (gs.phase === 'fire') return;
-  if (gs.phase !== 'burn_window') return;
+  if (gs.phase !== 'burn_window' && gs.phase !== 'cabo_burn_window') return;
+  const isCaboFinal = gs.phase === 'cabo_burn_window';
   fireSelection = [];
   const queue = gs.players.filter(p => p.id !== myId).map(p => p.id);
   await mutate(gs => {
@@ -2438,6 +2533,8 @@ async function startFire() {
     };
     gs.phase = 'fire';
     gs.burnWindow = null;
+    gs.caboBurnWindow = null;
+    gs._fireStartedInCaboBurnWindow = isCaboFinal;
     gs.lastAction = `🔥 ${myName} started a Fire!`;
   });
   fireSelection = [];
@@ -2814,9 +2911,15 @@ function _checkFireDone(gs) {
   if (!gs.fire) return;
   if (gs.fire.queue.length === 0) {
     gs.fire.done = true;
-    gs.phase = 'draw';
     gs.lastAction = (gs.lastAction || '') + ' Fire extinguished.';
     gs.fire = null;
+    // If fire was started during the cabo final burn window, end the round now
+    if (gs._fireStartedInCaboBurnWindow) {
+      gs._fireStartedInCaboBurnWindow = false;
+      endRound(gs);
+    } else {
+      gs.phase = 'draw';
+    }
   }
 }
 
@@ -2841,7 +2944,10 @@ function advanceTurn(gs) {
   const nextIdx = (idx + 1) % gs.players.length;
   const nextPlayer = gs.players[nextIdx];
   if (gs.cabo && nextPlayer.id === gs.cabo) {
-    endRound(gs);
+    // Before ending the round, give everyone a final 5-second burn window
+    gs.phase = 'cabo_burn_window';
+    gs.caboBurnWindow = { durationMs: 5000 };
+    gs.lastAction = `⚔️ Last turn done! Final fire window before scores are revealed.`;
     return;
   }
   gs.currentTurn = nextPlayer.id;
@@ -2869,6 +2975,7 @@ function endRound(gs) {
   gs.gameOver = true;
   gs.winner = winner.id;
   gs.phase = 'end';
+  gs.caboBurnWindow = null;
 }
 
 // ═══════════════════════════════════════════
@@ -2904,11 +3011,15 @@ async function nextRound() {
     gs.roundScores = null;
     gs.rawHandScores = null;
     gs.revealedHands = false;
+    gs.caboBurnWindow = null;
+    gs._fireStartedInCaboBurnWindow = false;
     gs.lastAction = 'New round started!';
   });
   selectedHandIndex = -1;
   drawnCard = null;
   abilityTarget = null;
+  window._caboWindowDeadline = null;
+  if (window._caboWindowTimer) { clearInterval(window._caboWindowTimer); window._caboWindowTimer = null; }
 }
 
 // ═══════════════════════════════════════════
