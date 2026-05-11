@@ -538,9 +538,11 @@
   }
   body.dealing #gameScreen { filter: brightness(0.55); transition: filter 0.25s; }
   body.dealing #gameScreen .action-bar,
+  body.dealing #gameScreen #persistentFireBtn,
   body.dealing #gameScreen .game-log { opacity: 0; }
   body:not(.dealing) #gameScreen { filter: brightness(1); transition: filter 0.6s 0.1s; }
   body:not(.dealing) #gameScreen .action-bar,
+  body:not(.dealing) #gameScreen #persistentFireBtn,
   body:not(.dealing) #gameScreen .game-log { opacity: 1; transition: opacity 0.5s 0.3s; }
 
   #winnerStage {
@@ -981,6 +983,13 @@
     <div class="action-btns" id="actionBtns"></div>
   </div>
 
+  <!-- Persistent fire button — always available so any player can interrupt -->
+  <div id="persistentFireBtn" style="display:none;text-align:center;margin-top:8px">
+    <button class="btn btn-danger" onclick="startFire()" title="Start a fire — pause the game, every player gets to burn matching cards" style="padding:8px 18px;font-size:12px;letter-spacing:0.15em">
+      🔥 START FIRE
+    </button>
+  </div>
+
   <div class="game-log" id="gameLog"></div>
 </div>
 
@@ -1284,10 +1293,15 @@ function connectToRoom(code, onOpenExtra) {
         } else {
           if (document.getElementById('waitingScreen').classList.contains('active')) showScreen('gameScreen');
           // ── Fire animation for observers: render FIRST (so card slots exist in DOM),
-          // then play animation using the fireAnimEvent attached to incoming state ──
+          // then play animation using the fireAnimEvent attached to incoming state.
+          // Each event carries a unique eventId; we track which we've already played
+          // so unrelated mutates that happen to still carry the same fireAnimEvent
+          // don't trigger a replay on observers (this was a real bug).
           const fireEvt = gs.fireAnimEvent;
-          if (fireEvt && fireEvt.actorId !== myId) {
-            // Render with ghost slots still in place, then animate
+          window._seenFireEvents = window._seenFireEvents || new Set();
+          const alreadyPlayed = fireEvt?.eventId && window._seenFireEvents.has(fireEvt.eventId);
+          if (fireEvt && fireEvt.actorId !== myId && !alreadyPlayed) {
+            if (fireEvt.eventId) window._seenFireEvents.add(fireEvt.eventId);
             renderGame(gs);
             const burnedSlots = (fireEvt.burned || []).map(b => ({
               elId: b.ownerId === myId ? `my_${b.index}` : `opp_${b.ownerId}_${b.index}`,
@@ -1298,7 +1312,6 @@ function connectToRoom(code, onOpenExtra) {
               toId: p.toOwnerId === myId ? `my_${p.toIndex}` : `opp_${p.toOwnerId}_${p.toIndex}`,
             }));
             requestAnimationFrame(() => playFireBurnAnimation(burnedSlots, pushedMoves));
-            // Locally clear so repeated state broadcasts don't replay the animation
             gameState.fireAnimEvent = null;
           } else {
             renderGame(gs);
@@ -1916,6 +1929,15 @@ function renderGame(gs) {
   // Actions
   renderActions(gs, isMyTurn, myHand);
 
+  // Persistent fire button — visible to ALL players whenever a fire is allowed.
+  // Hidden during: lobby, end, initial peek for me, or while a fire is already in progress.
+  const fireBtn = document.getElementById('persistentFireBtn');
+  if (fireBtn) {
+    const canFire = gs.phase !== 'lobby' && gs.phase !== 'end' && gs.phase !== 'fire'
+                 && !isInitialRevealVisible(gs, myId);
+    fireBtn.style.display = canFire ? '' : 'none';
+  }
+
   // Log
   if (gs.lastAction) addLog(gs.lastAction);
 
@@ -1957,115 +1979,9 @@ function renderActions(gs, isMyTurn, myHand) {
   }
 
 
-  // ── BURN WINDOW PHASE ──
-  if (gs.phase === 'burn_window' && gs.burnWindow) {
-    // Use a local client-side deadline so server clock skew doesn't matter.
-    // Reset deadline whenever forPlayer changes (i.e. new turn started).
-    if (window._burnWindowForPlayer !== gs.burnWindow.forPlayer) {
-      window._burnWindowForPlayer = gs.burnWindow.forPlayer;
-      window._burnWindowDeadline = Date.now() + (gs.burnWindow.durationMs || 5000);
-      if (window._burnWindowTimer) { clearInterval(window._burnWindowTimer); window._burnWindowTimer = null; }
-    }
-    if (!window._burnWindowTimer) {
-      window._burnWindowTimer = setInterval(() => {
-        if (!gameState || gameState.phase !== 'burn_window') {
-          clearInterval(window._burnWindowTimer); window._burnWindowTimer = null; return;
-        }
-        if (Date.now() >= window._burnWindowDeadline) {
-          clearInterval(window._burnWindowTimer); window._burnWindowTimer = null;
-          closeBurnWindow();
-        } else {
-          renderGame(gameState);
-        }
-      }, 250);
-    }
-    const bw = gs.burnWindow;
-    const activePlayer = gs.players.find(p => p.id === bw.forPlayer)?.name || '?';
-    const timeLeft = Math.max(0, Math.ceil((window._burnWindowDeadline - Date.now()) / 1000));
-    msg.innerHTML = `<div class="fire-banner">
-      <div class="fire-banner-title">🔥 Fire Window — ${timeLeft}s</div>
-      <div class="fire-banner-sub"><strong>${activePlayer}</strong>'s turn is about to begin.<br>Anyone can start a fire right now!</div>
-    </div>`;
-    btns.innerHTML = `<button class="btn btn-danger" style="animation:pulse 0.8s infinite alternate" onclick="startFire()">🔥 Start Fire!</button>`;
-    return;
-  } else if (window._burnWindowTimer) {
-    clearInterval(window._burnWindowTimer); window._burnWindowTimer = null;
-    window._burnWindowDeadline = null; window._burnWindowForPlayer = null;
-  }
-
-  // ── CABO FINAL BURN WINDOW ──
-  if (gs.phase === 'cabo_burn_window') {
-    // Use a local client-side deadline, reset once per cabo_burn_window entry
-    if (!window._caboWindowDeadline) {
-      window._caboWindowDeadline = Date.now() + (gs.caboBurnWindow?.durationMs || 5000);
-      if (window._caboWindowTimer) clearInterval(window._caboWindowTimer);
-      window._caboWindowTimer = setInterval(() => {
-        if (!gameState || gameState.phase !== 'cabo_burn_window') {
-          clearInterval(window._caboWindowTimer); window._caboWindowTimer = null;
-          window._caboWindowDeadline = null; return;
-        }
-        if (Date.now() >= window._caboWindowDeadline) {
-          clearInterval(window._caboWindowTimer); window._caboWindowTimer = null;
-          window._caboWindowDeadline = null;
-          closeCaboBurnWindow();
-        } else {
-          renderGame(gameState);
-        }
-      }, 250);
-    }
-    const timeLeft = Math.max(0, Math.ceil((window._caboWindowDeadline - Date.now()) / 1000));
-    msg.innerHTML = `<div class="fire-banner" style="border-color:rgba(201,168,76,0.6);background:linear-gradient(135deg,rgba(80,50,0,0.95),rgba(40,20,0,0.98))">
-      <div class="fire-banner-title" style="color:var(--gold)">⚔️ CABO! Final Fire Window — ${timeLeft}s</div>
-      <div class="fire-banner-sub">The round ends in ${timeLeft}s. Anyone may start one last fire now!</div>
-    </div>`;
-    btns.innerHTML = `<button class="btn btn-danger" style="animation:pulse 0.8s infinite alternate" onclick="startFire()">🔥 Start Fire!</button>`;
-    return;
-  } else if (window._caboWindowTimer) {
-    clearInterval(window._caboWindowTimer); window._caboWindowTimer = null;
-    window._caboWindowDeadline = null;
-  }
-
-  // ── CABO CALL WINDOW — post-fire, prev player gets 5s to call CABO ──
-  if (gs.phase === 'cabo_call_window' && gs.caboCallWindow) {
-    const forId = gs.caboCallWindow.forPlayerId;
-    const forName = gs.players.find(p => p.id === forId)?.name || '?';
-    const isMe = forId === myId;
-    if (!window._caboCallWindowDeadline) {
-      window._caboCallWindowDeadline = Date.now() + (gs.caboCallWindow.durationMs || 5000);
-      if (window._caboCallWindowTimer) clearInterval(window._caboCallWindowTimer);
-      window._caboCallWindowTimer = setInterval(() => {
-        if (!gameState || gameState.phase !== 'cabo_call_window') {
-          clearInterval(window._caboCallWindowTimer); window._caboCallWindowTimer = null;
-          window._caboCallWindowDeadline = null; return;
-        }
-        if (Date.now() >= window._caboCallWindowDeadline) {
-          clearInterval(window._caboCallWindowTimer); window._caboCallWindowTimer = null;
-          window._caboCallWindowDeadline = null;
-          closeCaboCallWindow();
-        } else {
-          renderGame(gameState);
-        }
-      }, 250);
-    }
-    const timeLeft = Math.max(0, Math.ceil((window._caboCallWindowDeadline - Date.now()) / 1000));
-    if (isMe) {
-      msg.innerHTML = `<div class="fire-banner" style="border-color:rgba(201,168,76,0.6);background:linear-gradient(135deg,rgba(60,40,0,0.97),rgba(30,15,0,0.99))">
-        <div class="fire-banner-title" style="color:var(--gold)">⚔️ Call CABO? — ${timeLeft}s</div>
-        <div class="fire-banner-sub">The fire is out. You have ${timeLeft}s to call CABO before the next player draws!</div>
-      </div>`;
-      btns.innerHTML = `<button class="btn btn-danger" style="animation:pulse 0.8s infinite alternate" onclick="callCaboFromWindow()">⚔️ Call CABO!</button>
-        <button class="btn btn-secondary" onclick="closeCaboCallWindow()">Skip</button>`;
-    } else {
-      msg.innerHTML = `<div class="fire-banner" style="border-color:rgba(201,168,76,0.4);background:linear-gradient(135deg,rgba(40,30,0,0.95),rgba(20,10,0,0.98))">
-        <div class="fire-banner-title" style="color:var(--gold-dark)">⏳ Waiting — ${timeLeft}s</div>
-        <div class="fire-banner-sub"><strong>${escHtml(forName)}</strong> may call CABO…</div>
-      </div>`;
-    }
-    return;
-  } else if (window._caboCallWindowTimer) {
-    clearInterval(window._caboCallWindowTimer); window._caboCallWindowTimer = null;
-    window._caboCallWindowDeadline = null;
-  }
+  // (Old burn_window / cabo_burn_window / cabo_call_window phases removed —
+  //  fire can be started at any time via the persistent fire button, so the
+  //  pre-turn windows are no longer needed.)
 
   // ── FIRE PHASE ──
   if (gs.phase === 'fire' && gs.fire) {
@@ -2102,8 +2018,8 @@ function renderActions(gs, isMyTurn, myHand) {
         <div class="fire-banner-title">🔥 ${starter} burned ${burnedVal}s!</div>
         <div class="fire-banner-sub">
           <strong>Option 1:</strong> Select 1+ cards matching <strong>${burnedVal}</strong> (from any player) — no penalty, burned cleanly.<br>
-          <strong>Option 2:</strong> Select 2+ cards all sharing <em>any</em> same value — starts a new fire with that value. Opponent cards replaced by your remaining cards.<br>
-          <strong>Mismatch:</strong> Cards stay, you draw 2 penalty cards.<br>
+          <strong>Option 2:</strong> Select 2+ cards all sharing <em>any</em> same value — starts a NEW fire chain (every other player, including the original starter, gets to respond). Opponent cards replaced by yours.<br>
+          <strong>Mismatch / single non-match:</strong> Cards stay, you draw 2 penalty cards.<br>
           <span style="color:#fbbf24">${selCount} card(s) selected</span>
         </div>
       </div>`;
@@ -2274,6 +2190,17 @@ async function selectHandCard(i) {
       gs.phase = 'done';
       gs.swapHalos = [{ ownerId: myId, index: i }];
       gs.lastAction = `${myName} swapped a card.`;
+      // The card at this slot is now a different card — invalidate every
+      // OTHER player's knowledge of this slot (their stored knowledge points
+      // at the discarded card).
+      ensureKnowledge(gs);
+      for (const pid of Object.keys(gs.knownCards || {})) {
+        if (pid === myId) continue;
+        delete gs.knownCards[pid][cardKey(myId, i)];
+      }
+      // My own knowledge: I drew this card from deck, so I know what it is.
+      // (drawnFrom === 'deck' means I saw the drawn card; from 'discard' I also saw it.)
+      markKnown(gs, myId, myId, i);
       forgetMissingCards(gs);
     });
     selectedHandIndex = -1;
@@ -2360,6 +2287,14 @@ async function abilitySwapCommit(myIndex) {
   const isSwapPeek = needsType === 'swap_peek_own';
   const gs = gameState;
   if (!gs || gs.currentTurn !== myId) return;
+
+  // Defensive: an interrupting fire could have nulled either slot. Restart step 1.
+  if (!gs.hands[oppId]?.[oppIndex] || !gs.hands[myId]?.[myIndex]) {
+    showToast('That card is no longer available — pick again.');
+    abilityTarget = { type: isSwapPeek ? 'swap_peek' : 'blind_swap' };
+    renderGame(gs);
+    return;
+  }
 
   // Capture the card we'll receive before mutating, so we can show it after
   const receivedCard = gs.hands[oppId]?.[oppIndex];
@@ -2448,6 +2383,14 @@ async function peekSwapCommit(myIndex) {
   const { oppId, oppIndex } = abilityTarget;
   const gs = gameState;
   if (!gs || gs.currentTurn !== myId) return;
+  // Defensive: a fire could have burned the opp slot or our own slot while we
+  // were deciding. If so, restart from step 1 instead of crashing.
+  if (!gs.hands[oppId]?.[oppIndex] || !gs.hands[myId]?.[myIndex]) {
+    showToast('That card is no longer available — pick again.');
+    abilityTarget = { type: 'peek_swap' };
+    renderGame(gs);
+    return;
+  }
   playSwapAnimation(`my_${myIndex}`, `opp_${oppId}_${oppIndex}`, null);
   await mutate(gs => {
     const myCard  = gs.hands[myId][myIndex];
@@ -2543,63 +2486,44 @@ async function endTurn() {
 //     done,               // true when everyone responded
 //   }
 
-async function closeBurnWindow() {
-  const gs = gameState;
-  if (!gs || gs.phase !== 'burn_window') return;
-  await mutate(gs => { gs.phase = 'draw'; gs.burnWindow = null; });
-}
-
-async function closeCaboBurnWindow() {
-  const gs = gameState;
-  if (!gs || gs.phase !== 'cabo_burn_window') return;
-  await mutate(gs => { endRound(gs); });
-}
-
-async function closeCaboCallWindow() {
-  const gs = gameState;
-  if (!gs || gs.phase !== 'cabo_call_window') return;
-  await mutate(gs => { gs.phase = 'draw'; gs.caboCallWindow = null; });
-}
-
-async function callCaboFromWindow() {
-  const gs = gameState;
-  if (!gs || gs.phase !== 'cabo_call_window') return;
-  if (gs.caboCallWindow?.forPlayerId !== myId) return;
-  await mutate(gs => {
-    gs.cabo = myId;
-    gs.caboLastRound = true;
-    gs.phase = 'draw';
-    gs.caboCallWindow = null;
-    gs.lastAction = `⚔️ ${myName} called CABO!`;
-  });
-  showToast('You called CABO! One more round for everyone else.');
-}
+// Note: closeBurnWindow / closeCaboBurnWindow / closeCaboCallWindow /
+// callCaboFromWindow were removed along with the obsolete window phases.
+// The persistent fire button replaces the burn windows; CABO is called via
+// the regular Call CABO button at the end of your turn.
 
 async function startFire() {
   const gs = gameState;
-  if (!gs || gs.phase === 'end') return;
-  if (gs.phase === 'fire') return;
-  if (gs.phase !== 'burn_window' && gs.phase !== 'cabo_burn_window') return;
-  const isCaboFinal = gs.phase === 'cabo_burn_window';
-  const prevPlayerId = gs.gameState?.burnWindow?.prevPlayerId || null; // not available here; read inside mutate
+  if (!gs) return;
+  // Fire can happen ANY time except: already in a fire, in lobby, or after game ended.
+  if (gs.phase === 'fire' || gs.phase === 'lobby' || gs.phase === 'end') return;
+  // Don't allow firing while you still have the initial-peek overlay open
+  if (isInitialRevealVisible(gs, myId)) return;
   fireSelection = [];
-  const queue = gs.players.filter(p => p.id !== myId).map(p => p.id);
   await mutate(gs => {
-    const prevPlayer = gs.burnWindow?.prevPlayerId || null;
+    // Snapshot the entire pre-fire context so we can restore it cleanly after the fire ends.
+    // This is what lets the game "pause" for a fire from any phase and resume exactly where it left off.
+    gs.preFireSnapshot = {
+      phase: gs.phase,
+      drawnCard: gs.drawnCard || null,
+      drawnFrom: gs.drawnFrom || '',
+      currentTurn: gs.currentTurn,
+      cabo: gs.cabo || null,
+      caboLastRound: !!gs.caboLastRound,
+    };
     gs.fire = {
       starterId: myId,
       burnedValue: null,
       starterCards: [],
       starterPenalty: false,
-      queue,
+      queue: gs.players.filter(p => p.id !== myId).map(p => p.id),
       responses: {},
       done: false,
-      prevPlayerId: prevPlayer,
     };
     gs.phase = 'fire';
-    gs.burnWindow = null;
-    gs.caboBurnWindow = null;
-    gs._fireStartedInCaboBurnWindow = isCaboFinal;
+    // Clear any orphaned animation state from a previous fire so observers don't replay it
+    gs.fireAnimEvent = null;
+    gs.fireHalos = [];
+    gs.pushHalos = [];
     gs.lastAction = `🔥 ${myName} started a Fire!`;
   });
   fireSelection = [];
@@ -2741,12 +2665,12 @@ async function burnFireSelection() {
         const penalty2 = gs.deck.pop();
         if (penalty1) addCardToHand(gs.hands[myId], penalty1);
         if (penalty2) addCardToHand(gs.hands[myId], penalty2);
-        gs.fire = null;
-        gs.phase = 'draw';
         gs.fireHalos = [];
         gs.fireAnimEvent = null;
         gs.pushHalos = [];
         gs.lastAction = `🔥 ${myName} tried to burn mismatched cards — burn failed! Cards kept, drew 2 penalty cards!`;
+        // Starter mismatched on opening — the fire never really starts. Restore pre-fire context.
+        _endFireAndRestore(gs);
         return;
       }
 
@@ -2770,36 +2694,47 @@ async function burnFireSelection() {
       for (const card of removedFromSelf) gs.discard.push(card);
       for (const { card } of removedFromOpp) gs.discard.push(card);
 
+      // Push starter's cards into opponent slots WITHOUT reshuffling the starter's hand.
+      // Bug being fixed: old code cleared every non-null slot of the starter and then
+      // re-filled them via addCardToHand, which compacted survivors to the front and
+      // visually shuffled the starter's whole hand. New behavior: pick the lowest-index
+      // remaining cards (one per opponent slot), null out ONLY those slots, leave the
+      // rest of the hand exactly where it was.
+      let pushSourceIndices = [];
       if (removedFromOpp.length > 0) {
-        const replacements = [];
+        const candidateSlots = [];
         for (let i = 0; i < gs.hands[myId].length; i++) {
-          if (gs.hands[myId][i] !== null) {
-            replacements.push(gs.hands[myId][i]);
-            gs.hands[myId][i] = null;
-          }
+          if (gs.hands[myId][i] !== null) candidateSlots.push(i);
         }
-        for (const { ownerId, idx } of removedFromOpp) {
-          const rep = replacements.shift();
-          if (rep) gs.hands[ownerId][idx] = rep;
+        const take = Math.min(candidateSlots.length, removedFromOpp.length);
+        pushSourceIndices = candidateSlots.slice(0, take);
+        for (let i = 0; i < take; i++) {
+          const sourceSlot = pushSourceIndices[i];
+          const { ownerId, idx } = removedFromOpp[i];
+          gs.hands[ownerId][idx] = gs.hands[myId][sourceSlot];
+          gs.hands[myId][sourceSlot] = null;
         }
-        for (const card of replacements) addCardToHand(gs.hands[myId], card);
+        // If starter doesn't have enough cards to cover all opponent slots, the
+        // remaining opp slots stay null (already nulled by the burn loop above).
       }
 
       forgetMissingCards(gs);
       // Green halos on cards pushed to opponents
       gs.pushHalos = removedFromOpp.map(o => ({ ownerId: o.ownerId, index: o.idx }));
       gs.fireHalos = [];
-      // Animation event for observers (they check actorId !== myId)
+      // Animation event for observers (they check actorId !== myId).
+      // Use the actual slots cards came from so the animation lines up with the new hand.
       gs.fireAnimEvent = {
+        eventId: 'fe_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
         actorId: myId,
         burned: [...fireSelection.filter(s => s.ownerId === myId).map(s => ({ ownerId: s.ownerId, index: s.index })),
                  ...removedFromOpp.map(o => ({ ownerId: o.ownerId, index: o.idx }))],
-        pushed: removedFromOpp.map((o, i) => ({
+        pushed: removedFromOpp.slice(0, pushSourceIndices.length).map((o, i) => ({
           fromOwnerId: myId,
-          fromIndex: remainingMySlots[i],
+          fromIndex: pushSourceIndices[i],
           toOwnerId: o.ownerId,
           toIndex: o.idx
-        })).filter(p => p.fromIndex !== undefined)
+        }))
       };
 
       const totalBurned = removedFromSelf.length + removedFromOpp.length;
@@ -2851,24 +2786,32 @@ async function burnFireSelection() {
       const allVals = freshSelection.map(s => s.value);
       const allSameValue = allVals.every(v => v === allVals[0]);
       const matchesFireValue = allVals.every(v => v === fireValue);
+      // A burn is valid if all cards share the same value AND either match the current
+      // fire value (clean burn) or there are ≥2 cards (starting a new chain).
+      const isValidBurn = allSameValue && (matchesFireValue || freshSelection.length >= 2);
 
-      if (!allSameValue) {
+      if (!isValidBurn) {
+        // Invalid: cards stay in their original slots, responder draws 2 penalty cards.
+        // No removal/push happens, so there is nothing to undo and no shuffle risk.
         reshuffleDeckIfNeeded(gs);
         const p1 = gs.deck.pop();
         reshuffleDeckIfNeeded(gs);
         const p2 = gs.deck.pop();
         if (p1) addCardToHand(gs.hands[myId], p1);
         if (p2) addCardToHand(gs.hands[myId], p2);
-        gs.fire.responses[myId] = 'burned';
+        gs.fire.responses[myId] = 'passed';
         gs.fire.queue = gs.fire.queue.slice(1);
         gs.fireHalos = [];
         gs.fireAnimEvent = null;
         gs.pushHalos = [];
-        gs.lastAction = `🔥 ${myName} threw mismatched cards — burn failed! Cards kept, drew 2 penalty cards!`;
+        gs.lastAction = !allSameValue
+          ? `🔥 ${myName} threw mismatched cards — burn failed! Cards kept, drew 2 penalty cards!`
+          : `🔥 ${myName} tried to burn a single non-matching card — burn failed! Cards kept, drew 2 penalty cards!`;
         _checkFireDone(gs);
         return;
       }
 
+      // Valid burn: remove the selected cards from their owners' hands
       const byOwner = {};
       for (const s of freshSelection) {
         if (!byOwner[s.ownerId]) byOwner[s.ownerId] = [];
@@ -2889,61 +2832,61 @@ async function burnFireSelection() {
       for (const card of removedFromSelf) gs.discard.push(card);
       for (const { card } of removedFromOpp) gs.discard.push(card);
 
+      // Push the responder's own cards into the burned opponent slots WITHOUT
+      // reshuffling the responder's hand. Only the slots whose cards are leaving
+      // get nulled — every other card stays exactly where it was.
+      let pushSourceIndices2 = [];
       if (removedFromOpp.length > 0) {
-        const replacements = [];
+        const candidateSlots = [];
         for (let i = 0; i < gs.hands[myId].length; i++) {
-          if (gs.hands[myId][i] !== null) {
-            replacements.push(gs.hands[myId][i]);
-            gs.hands[myId][i] = null;
-          }
+          if (gs.hands[myId][i] !== null) candidateSlots.push(i);
         }
-        for (const { ownerId, idx } of removedFromOpp) {
-          const rep = replacements.shift();
-          if (rep) gs.hands[ownerId][idx] = rep;
+        const take = Math.min(candidateSlots.length, removedFromOpp.length);
+        pushSourceIndices2 = candidateSlots.slice(0, take);
+        for (let i = 0; i < take; i++) {
+          const sourceSlot = pushSourceIndices2[i];
+          const { ownerId, idx } = removedFromOpp[i];
+          gs.hands[ownerId][idx] = gs.hands[myId][sourceSlot];
+          gs.hands[myId][sourceSlot] = null;
         }
-        for (const card of replacements) addCardToHand(gs.hands[myId], card);
       }
 
       forgetMissingCards(gs);
 
       gs.pushHalos = removedFromOpp.map(o => ({ ownerId: o.ownerId, index: o.idx }));
       gs.fireHalos = [];
-      gs.fire.responses[myId] = 'burned';
-      gs.fire.queue = gs.fire.queue.slice(1);
       didValidBurn = true;
-      // Animation event for observers
+      // Animation event for observers — must use the real source slots so the
+      // flying-card animation matches the new hand layout.
       gs.fireAnimEvent = {
+        eventId: 'fe_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
         actorId: myId,
         burned: freshSelection.map(s => ({ ownerId: s.ownerId, index: s.index })),
-        pushed: removedFromOpp.map((o, i) => ({
+        pushed: removedFromOpp.slice(0, pushSourceIndices2.length).map((o, i) => ({
           fromOwnerId: myId,
-          fromIndex: remainingMySlots2[i],
+          fromIndex: pushSourceIndices2[i],
           toOwnerId: o.ownerId,
           toIndex: o.idx
-        })).filter(p => p.fromIndex !== undefined)
+        }))
       };
 
       const totalBurned = removedFromSelf.length + removedFromOpp.length;
       if (matchesFireValue) {
+        // Clean burn — just advance the queue past this responder
+        gs.fire.responses[myId] = 'burned';
+        gs.fire.queue = gs.fire.queue.slice(1);
         gs.lastAction = `🔥 ${myName} burned ${totalBurned}x ${fireValue}(s) — clean burn!`;
-      } else if (freshSelection.length >= 2) {
-        gs.fire.burnedValue = allVals[0];
-        gs.lastAction = `🔥 ${myName} started a new fire with ${totalBurned}x ${allVals[0]}(s)! Fire spreads!`;
       } else {
-        // Single card, wrong value — undo
-        const idx = freshSelection.find(s => s.ownerId === myId)?.index;
-        for (const card of removedFromSelf) { if (idx !== undefined) gs.hands[myId][idx] = card; }
-        for (const { card, ownerId, idx } of removedFromOpp) gs.hands[ownerId][idx] = card;
-        gs.discard.splice(gs.discard.length - (removedFromSelf.length + removedFromOpp.length));
-        reshuffleDeckIfNeeded(gs);
-        const p1 = gs.deck.pop();
-        reshuffleDeckIfNeeded(gs);
-        const p2 = gs.deck.pop();
-        if (p1) addCardToHand(gs.hands[myId], p1);
-        if (p2) addCardToHand(gs.hands[myId], p2);
-        gs.pushHalos = [];
-        didValidBurn = false;
-        gs.lastAction = `🔥 ${myName} tried to burn a single non-matching card — burn failed! Cards kept, drew 2 penalty cards!`;
+        // New fire chain — reset queue so EVERY other player (including the
+        // original starter) gets a turn to respond to the new burned value.
+        // This fixes the bug where the original starter was skipped on chains.
+        gs.fire.burnedValue = allVals[0];
+        gs.fire.starterId = myId;
+        gs.fire.starterCards = [...removedFromSelf, ...removedFromOpp.map(o => o.card)];
+        gs.fire.starterPenalty = false;
+        gs.fire.queue = gs.players.filter(p => p.id !== myId).map(p => p.id);
+        gs.fire.responses = {};
+        gs.lastAction = `🔥 ${myName} started a new fire with ${totalBurned}x ${allVals[0]}(s)! Every other player must respond!`;
       }
 
       _checkFireDone(gs);
@@ -2977,21 +2920,46 @@ function _checkFireDone(gs) {
   if (gs.fire.queue.length === 0) {
     gs.fire.done = true;
     gs.lastAction = (gs.lastAction || '') + ' Fire extinguished.';
-    const prevPlayerId = gs.fire.prevPlayerId || null;
-    gs.fire = null;
-    // If fire was started during the cabo final burn window, end the round now
-    if (gs._fireStartedInCaboBurnWindow) {
-      gs._fireStartedInCaboBurnWindow = false;
-      endRound(gs);
-    } else if (prevPlayerId && !gs.cabo) {
-      // Give the player whose turn just ended a 5s window to call CABO
-      gs.phase = 'cabo_call_window';
-      gs.caboCallWindow = { forPlayerId: prevPlayerId, durationMs: 5000 };
-    } else {
-      // cabo already called or no prevPlayer — go straight to draw
-      gs.phase = 'draw';
+    _endFireAndRestore(gs);
+  }
+}
+
+// Restore pre-fire context after the fire finishes (whether it extinguished cleanly
+// or terminated early via a mismatched starter burn). The fire is "paused" so we
+// resume exactly where the game was — turn, phase, drawn card, everything.
+function _endFireAndRestore(gs) {
+  const snap = gs.preFireSnapshot;
+  gs.fire = null;
+  gs.preFireSnapshot = null;
+  // Halos/animations from the just-finished fire are still useful for a moment;
+  // they'll be cleared by the actor's follow-up mutate after the animation completes.
+  if (snap) {
+    gs.phase       = snap.phase;
+    gs.drawnCard   = snap.drawnCard;
+    gs.drawnFrom   = snap.drawnFrom;
+    gs.currentTurn = snap.currentTurn;
+    // cabo/caboLastRound shouldn't be changed by a fire, but restore for safety
+    gs.cabo          = snap.cabo;
+    gs.caboLastRound = snap.caboLastRound;
+  } else {
+    // Defensive default: shouldn't happen since startFire always snapshots
+    gs.phase = 'draw';
+  }
+  // Replenish any player whose hand was burned to empty so they can keep playing
+  // and so they can't auto-win with a score of zero.
+  for (const p of gs.players) {
+    const hand = gs.hands[p.id] || [];
+    const remaining = hand.filter(c => c).length;
+    if (remaining === 0) {
+      reshuffleDeckIfNeeded(gs);
+      const replacement = gs.deck.pop();
+      if (replacement) {
+        // Reset the hand to a single slot containing the replacement card
+        gs.hands[p.id] = [replacement];
+      }
     }
   }
+  forgetMissingCards(gs);
 }
 
 
@@ -3015,39 +2983,74 @@ function advanceTurn(gs) {
   const nextIdx = (idx + 1) % gs.players.length;
   const nextPlayer = gs.players[nextIdx];
   if (gs.cabo && nextPlayer.id === gs.cabo) {
-    // Before ending the round, give everyone a final 5-second burn window
-    gs.phase = 'cabo_burn_window';
-    gs.caboBurnWindow = { durationMs: 5000 };
-    gs.lastAction = `⚔️ Last turn done! Final fire window before scores are revealed.`;
+    // CABO caller's turn comes back around — every other player has had their
+    // final turn, so end the round directly. Fires were available throughout
+    // via the persistent fire button, so no extra fire window is needed.
+    endRound(gs);
     return;
   }
-  const prevPlayerId = gs.currentTurn; // capture before overwriting
   gs.currentTurn = nextPlayer.id;
   gs.turnCount = (gs.turnCount || 0) + 1;
-
-  // 5-second window for anyone to start a fire before next turn begins
-  gs.phase = 'burn_window';
-  gs.burnWindow = { forPlayer: gs.currentTurn, prevPlayerId, durationMs: 5000 };
+  gs.phase = 'draw';
+  // Clean up obsolete window fields if present from older state
+  gs.burnWindow = null;
+  gs.caboBurnWindow = null;
+  gs.caboCallWindow = null;
 }
 
 function endRound(gs) {
-  // Score = raw hand card total for every player — lowest wins
-  const handScores = {};
+  // Raw score = sum of card points for every player's remaining cards
+  const rawScores = {};
   for (let p of gs.players) {
-    const hand = gs.hands[p.id];
-    handScores[p.id] = hand.filter(c => c).reduce((sum, c) => sum + cardPoints(c), 0);
+    const hand = gs.hands[p.id] || [];
+    rawScores[p.id] = hand.filter(c => c).reduce((sum, c) => sum + cardPoints(c), 0);
   }
-  for (let p of gs.players) gs.scores[p.id] = handScores[p.id];
-  gs.roundScores = handScores;
-  gs.rawHandScores = handScores;
+  // Save raw scores for the scoreboard
+  gs.rawHandScores = { ...rawScores };
+
+  // CABO penalty: if the caller called CABO but is NOT strictly the lowest
+  // raw score, they get +5 (standard variant penalty). The caller must beat
+  // everyone outright — tying with anyone else still counts as "not lowest".
+  const finalScores = { ...rawScores };
+  if (gs.cabo) {
+    const callerRaw = rawScores[gs.cabo];
+    const someoneElseAtOrBelow = gs.players.some(p =>
+      p.id !== gs.cabo && rawScores[p.id] <= callerRaw
+    );
+    if (someoneElseAtOrBelow) {
+      finalScores[gs.cabo] = callerRaw + 5;
+    }
+  }
+
+  for (let p of gs.players) gs.scores[p.id] = finalScores[p.id];
+  gs.roundScores = finalScores;
   gs.revealedHands = true;
-  gs.lastAction = 'Round over!';
-  // Single-round game — lowest hand score wins
-  const winner = gs.players.reduce((a, b) => gs.scores[a.id] < gs.scores[b.id] ? a : b);
+  gs.lastAction = gs.cabo && finalScores[gs.cabo] !== rawScores[gs.cabo]
+    ? `Round over — CABO call failed, +5 penalty applied.`
+    : 'Round over!';
+
+  // Tie-break rule: CABO caller LOSES ties (they took the risk). Among
+  // non-callers, ties resolve by player order (deterministic). This means
+  // we pick the player with the lowest finalScore; if multiple tie, we pick
+  // the first non-caller in player order, then fall back to the caller only
+  // if everyone tied and there's no non-caller (impossible with ≥1 non-caller).
+  const minScore = Math.min(...gs.players.map(p => finalScores[p.id]));
+  const tied = gs.players.filter(p => finalScores[p.id] === minScore);
+  let winner;
+  if (tied.length === 1) {
+    winner = tied[0];
+  } else {
+    const tiedNonCallers = tied.filter(p => p.id !== gs.cabo);
+    winner = tiedNonCallers.length > 0 ? tiedNonCallers[0] : tied[0];
+  }
   gs.gameOver = true;
   gs.winner = winner.id;
   gs.phase = 'end';
+  // Clear any leftover window state
+  gs.burnWindow = null;
   gs.caboBurnWindow = null;
+  gs.caboCallWindow = null;
+  gs.preFireSnapshot = null;
 }
 
 // ═══════════════════════════════════════════
