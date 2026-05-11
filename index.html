@@ -471,11 +471,15 @@
   .game-log .log-new { color: var(--gold-light); }
 
 
-  /* Peek overlay */
+  /* Peek overlay — moved to TOP-CENTER and made click-through so the user can
+     still interact with their hand cards while it's open. This matters most
+     for the King's peek-then-swap flow: the player needs to click their own
+     card to swap, and the old bottom-positioned overlay was sitting on top of
+     the hand and silently swallowing those clicks. */
   .peek-overlay {
     display: none;
     position: fixed;
-    bottom: 100px; left: 50%;
+    top: 80px; left: 50%;
     transform: translateX(-50%);
     background: #0d1509;
     border: 1px solid rgba(201,168,76,0.4);
@@ -487,8 +491,10 @@
     flex-direction: column;
     align-items: center;
     gap: 12px;
+    pointer-events: none; /* clicks pass through to underlying cards/buttons */
   }
   .peek-overlay.show { display: flex; }
+  .peek-overlay button { pointer-events: auto; } /* but Got-it button still works */
   #peekMsg { font-family: 'Cinzel', serif; font-size: 13px; color: var(--gold); letter-spacing: 0.1em; }
 
   /* Toast */
@@ -1188,26 +1194,6 @@
     font-weight: 600;
   }
 
-  /* "I know this" eye watermark on face-down cards I've already peeked */
-  .card-known-eye {
-    position: absolute;
-    top: 3px;
-    right: 3px;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: rgba(34, 100, 220, 0.88);
-    color: #fff;
-    font-size: 9px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 6;
-    border: 1px solid #fff;
-    pointer-events: none;
-    box-shadow: 0 0 6px rgba(34,100,220,0.65);
-    font-family: sans-serif;
-  }
 
   /* Drawn-card slide-in animation overlay */
   #drawAnimOverlay {
@@ -1419,7 +1405,6 @@
     <div class="round-info" style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
       <div id="roundLabel">Round 1</div>
       <div id="turnStatus" class="status-pill waiting">Waiting...</div>
-      <button id="viewerModeBtn" class="btn btn-secondary" onclick="toggleViewerMode()" style="padding:3px 10px;font-size:9px;margin-top:2px;letter-spacing:0.1em;display:none">🔍 Viewer</button>
     </div>
   </div>
 
@@ -1730,19 +1715,6 @@ let fireSelection = [];
 let peekTimeout = null;
 // Temporarily revealed card (shown only while peek overlay is open)
 let tempPeekCard = null; // { ownerId, index }
-// Debug viewer mode — reveals all cards face-up
-let viewerMode = false;
-function toggleViewerMode() {
-  viewerMode = !viewerMode;
-  const btn = document.getElementById('viewerModeBtn');
-  if (btn) {
-    btn.textContent = viewerMode ? '🔍 ON' : '🔍 Viewer';
-    btn.style.background = viewerMode ? 'rgba(249,115,22,0.22)' : '';
-    btn.style.borderColor = viewerMode ? '#f97316' : '';
-    btn.style.color = viewerMode ? '#f97316' : '';
-  }
-  if (gameState) renderGame(gameState);
-}
 
 // ═══════════════════════════════════════════
 // ROOM CODE + ID
@@ -1791,7 +1763,24 @@ function connectToRoom(code, onOpenExtra) {
         const prevGs = gameState;
         gameState = gs;
         if (gs.phase === 'lobby') {
+          // Coming back from a finished game (host hit Play Again) — wipe any
+          // lingering local UI state so the next round starts clean for me too.
+          if (prevGs && prevGs.phase && prevGs.phase !== 'lobby') {
+            selectedHandIndex = -1;
+            drawnCard = null;
+            abilityTarget = null;
+            fireSelection = [];
+            tempPeekCard = null;
+            window._winnerShown = false;
+            window._initialFlipShownFor = null;
+            window._seenFireEvents = new Set();
+          }
           renderWaiting(gs);
+          // If we were on the game screen (or any other screen), step back to
+          // the waiting room so we can see the player list and Start button.
+          if (!document.getElementById('waitingScreen').classList.contains('active')) {
+            showScreen('waitingScreen');
+          }
         } else {
           if (document.getElementById('waitingScreen').classList.contains('active')) showScreen('gameScreen');
           // ── Fire animation for observers: render FIRST (so card slots exist in DOM),
@@ -1904,7 +1893,6 @@ async function hostGame() {
     cabo: null,
     drawnCard: null,
     drawnFrom: '',
-    knownCards: {},
     initialPeekDone: {},
     fire: null,
     swapHalos: [],
@@ -2007,7 +1995,6 @@ function initGameState(players) {
     caboLastRound: false,
     drawnCard: null,
     drawnFrom: '',
-    knownCards: createInitialKnowledge(players),
     initialPeekDone: createInitialPeekState(players),
     fire: null,
     swapHalos: [],
@@ -2058,41 +2045,12 @@ function addCardToHand(hand, card) {
 }
 
 // ═══════════════════════════════════════════
-// KNOWLEDGE
+// INITIAL PEEK STATE
 // ═══════════════════════════════════════════
-function cardKey(ownerId, index) { return ownerId + ':' + index; }
-function createInitialKnowledge(players) {
-  const knownCards = {};
-  for (let p of players) {
-    // Start with empty knowledge — cards 2 & 3 are shown via the initial peek window only,
-    // NOT pre-marked as known. Once Begin is pressed they flip face-down permanently.
-    knownCards[p.id] = {};
-  }
-  return knownCards;
-}
-function ensureKnowledge(gs) {
-  if (!gs.knownCards) gs.knownCards = createInitialKnowledge(gs.players);
-  for (let p of gs.players) if (!gs.knownCards[p.id]) gs.knownCards[p.id] = {};
-}
-function markKnown(gs, viewerId, ownerId, index) {
-  ensureKnowledge(gs);
-  gs.knownCards[viewerId][cardKey(ownerId, index)] = true;
-}
-function isKnownTo(viewerId, ownerId, index) {
-  if (!gameState) return false;
-  ensureKnowledge(gameState);
-  return !!gameState.knownCards?.[viewerId]?.[cardKey(ownerId, index)];
-}
-function forgetMissingCards(gs) {
-  ensureKnowledge(gs);
-  for (let viewerId of Object.keys(gs.knownCards)) {
-    for (let key of Object.keys(gs.knownCards[viewerId])) {
-      const [ownerId, rawIndex] = key.split(':');
-      const index = Number(rawIndex);
-      if (!gs.hands[ownerId] || !gs.hands[ownerId][index]) delete gs.knownCards[viewerId][key];
-    }
-  }
-}
+// Note: there is intentionally no persistent "known cards" tracking. Card
+// memory is the player's job — the only UI face-up reveals are during the
+// 4-second peek overlay (tempPeekCard), the initial pre-round peek of slots
+// 2 & 3 (initialPeekDone), and the final scores reveal (gs.revealedHands).
 function createInitialPeekState(players) {
   return Object.fromEntries(players.map(p => [p.id, false]));
 }
@@ -2111,20 +2069,15 @@ function isRed(card) {
 // ═══════════════════════════════════════════
 // CARD RENDERING (no external SVG sprite)
 // ═══════════════════════════════════════════
-function renderCardHtml(card, faceUp, extraClass, id, onclick = '', opts = {}) {
-  // opts: { knownByMeFaceDown: true } — draws a small eye watermark on a
-  //   face-down card to indicate I've seen it (my own knowledge marker).
+function renderCardHtml(card, faceUp, extraClass, id, onclick = '') {
   const isClickable = !!onclick;
   const classes = `card ${faceUp ? 'face-up' : 'face-down'} ${faceUp && isRed(card) ? 'red-suit' : ''} ${isClickable ? 'clickable' : ''} ${extraClass || ''}`;
   const clickAttr = isClickable ? `onclick="${onclick}"` : '';
   const label = faceUp ? cardLabel(card) : 'Card back';
-  const eyeWatermark = (!faceUp && opts.knownByMeFaceDown)
-    ? '<div class="card-known-eye" title="You\'ve seen this card">👁</div>'
-    : '';
 
   if (!faceUp) {
     // GoT card back
-    return `<div class="${classes}" id="${id}" ${clickAttr} aria-label="${escHtml(label)}">${eyeWatermark}${cardBackSVG()}</div>`;
+    return `<div class="${classes}" id="${id}" ${clickAttr} aria-label="${escHtml(label)}">${cardBackSVG()}</div>`;
   }
 
   // Face-up card
@@ -2213,10 +2166,6 @@ function renderGame(gs) {
     statusEl.className = 'status-pill ' + (isMyTurn ? 'your-turn' : 'waiting');
   }
 
-  // Viewer mode button — host-only debug tool
-  const viewerBtn = document.getElementById('viewerModeBtn');
-  if (viewerBtn) viewerBtn.style.display = isHost ? '' : 'none';
-
   // Turn-order ribbon
   renderTurnRibbon(gs);
 
@@ -2267,7 +2216,9 @@ function renderGame(gs) {
         return `<div class="card small face-down${nearClass}" id="opp_${p.id}_${i}" style="opacity:0.18;cursor:default;pointer-events:none">${cardBackSVG()}</div>`;
       }
       const isPeeking = !!(tempPeekCard && tempPeekCard.ownerId === p.id && tempPeekCard.index === i);
-      const known = gs.revealedHands || viewerMode || isPeeking || isKnownTo(myId, p.id, i);
+      // Card is face-up to me only during the active peek overlay or the round's final reveal.
+      // There is no persistent "I know this" memory in game state — memorize what you peek.
+      const known = gs.revealedHands || isPeeking;
       const selected = fireSelection.some(s => s.ownerId === p.id && s.index === i);
       // Starter AND current responder can fire-select opponent cards
       const isFireStarter = gs.phase === 'fire' && gs.fire && gs.fire.starterId === myId && !gs.fire.burnedValue;
@@ -2302,10 +2253,7 @@ function renderGame(gs) {
         : isPeekedByOther ? `<span class="peek-badge">👁 ${escHtml(peekerName)}</span>`
         : isPeekedBySelf ? '<span class="peek-badge" style="background:#1e40af">👁 You</span>'
         : '';
-      // Persistent "I know this" eye marker — only visible to ME on face-down opp cards I've previously peeked.
-      // We only need it when the card is rendered face-down for me (otherwise the card itself shows the value).
-      const showKnownEye = !known && isKnownTo(myId, p.id, i);
-      const cardHtml = renderCardHtml(known ? c : null, known, `small${nearClass}${fireSelClass}${fireSel}${haloClass}${fireHaloClass}${frozenClass}`, `opp_${p.id}_${i}`, click, { knownByMeFaceDown: showKnownEye });
+      const cardHtml = renderCardHtml(known ? c : null, known, `small${nearClass}${fireSelClass}${fireSel}${haloClass}${fireHaloClass}${frozenClass}`, `opp_${p.id}_${i}`, click);
       return hasBadge ? `<div style="position:relative;display:inline-block">${badge}${cardHtml}</div>` : cardHtml;
     };
 
@@ -2385,7 +2333,9 @@ function renderGame(gs) {
       // During initial peek (before Begin), show bottom 2 cards face-up.
       // After Begin is pressed, all cards go face-down — players must rely on memory.
       const initialPeek = isInitialRevealVisible(gs, myId) && i >= 2;
-      const known = gs.revealedHands || viewerMode || isPeekingOwn || isKnownTo(myId, myId, i) || initialPeek;
+      // Face-up only during the active peek overlay, the pre-round initial peek of slots 2&3,
+      // or the final scores reveal. No persistent "known" state — memorize what you peek.
+      const known = gs.revealedHands || isPeekingOwn || initialPeek;
       const sel = selectedHandIndex === i ? ' selected' : '';
       const isMyCaboFrozen = gs.cabo && gs.cabo === myId && gs.phase !== 'end';
       const fireClass = (myFireTurn && !isMyCaboFrozen) ? ' fire-selectable' : '';
@@ -2417,10 +2367,7 @@ function renderGame(gs) {
         : isOwnPeekedBySelf ? '<span class="peek-badge" style="background:#1e40af">👁 You</span>'
         : isOwnPeekedByOther ? `<span class="peek-badge">👁 ${escHtml(ownPeekerName)}</span>`
         : '';
-      // Persistent eye marker on my own face-down cards I've already peeked
-      // (e.g. via 7/8 own-peek, or remembered from a previous swap-peek).
-      const showOwnKnownEye = !known && isKnownTo(myId, myId, i);
-      const cardHtml = renderCardHtml(known ? c : null, known, sel + fireClass + fireSel + haloClass + fireHaloClass + myCaboFrozenClass, `my_${i}`, click, { knownByMeFaceDown: showOwnKnownEye });
+      const cardHtml = renderCardHtml(known ? c : null, known, sel + fireClass + fireSel + haloClass + fireHaloClass + myCaboFrozenClass, `my_${i}`, click);
       return hasBadgeOwn ? `<div style="position:relative;display:inline-block">${badge}${cardHtml}</div>` : cardHtml;
     };
     // Layout: render all slots in a fixed 2-column grid.
@@ -2528,7 +2475,7 @@ function renderActions(gs, isMyTurn, myHand) {
         ${sorted.map(p => `${escHtml(p.name)}: ${gs.scores[p.id] ?? 0}pts`).join(' &nbsp;|&nbsp; ')}
       </span>`;
     if (isHost) {
-      btns.innerHTML = `<button class="btn btn-primary" onclick="backToLobby()">⚔ Play Again</button>`;
+      btns.innerHTML = `<button class="btn btn-primary" onclick="playAgain()">⚔ Play Again</button>`;
     } else {
       btns.innerHTML = `<span style="font-family:'Cinzel',serif;font-size:11px;color:var(--muted);letter-spacing:0.1em">Waiting for host to start a new game…</span>`;
     }
@@ -2745,18 +2692,6 @@ async function selectHandCard(i) {
       gs.phase = 'done';
       gs.swapHalos = [{ ownerId: myId, index: i }];
       gs.lastAction = `${myName} swapped a card.`;
-      // The card at this slot is now a different card — invalidate every
-      // OTHER player's knowledge of this slot (their stored knowledge points
-      // at the discarded card).
-      ensureKnowledge(gs);
-      for (const pid of Object.keys(gs.knownCards || {})) {
-        if (pid === myId) continue;
-        delete gs.knownCards[pid][cardKey(myId, i)];
-      }
-      // My own knowledge: I drew this card from deck, so I know what it is.
-      // (drawnFrom === 'deck' means I saw the drawn card; from 'discard' I also saw it.)
-      markKnown(gs, myId, myId, i);
-      forgetMissingCards(gs);
     });
     selectedHandIndex = -1;
   }
@@ -2780,6 +2715,17 @@ async function discardDrawn() {
 async function useDrawnAbility() {
   const gs = gameState;
   if (!gs || gs.currentTurn !== myId || gs.phase !== 'action') return;
+  // Pre-set abilityTarget BEFORE the mutate. renderGame renders the cards FIRST
+  // and calls renderActions LAST, so without this the very first render after
+  // entering the ability phase would draw cards with abilityTarget = null —
+  // meaning no onclick handlers — and the user couldn't click anything until
+  // the next render (typically the server's echo, 50-500ms later).
+  const ability = cardAbility(gs.drawnCard?.value);
+  if      (ability === 'peek_own')   abilityTarget = { type: 'peek_own' };
+  else if (ability === 'spy')        abilityTarget = { type: 'spy' };
+  else if (ability === 'blind_swap') abilityTarget = { type: 'blind_swap' };
+  else if (ability === 'swap_peek')  abilityTarget = { type: 'swap_peek' };
+  else if (ability === 'peek_swap')  abilityTarget = { type: 'peek_swap' };
   await mutate(gs => {
     gs.phase = 'ability';
     gs.lastAction = `${myName} is using an ability.`;
@@ -2795,10 +2741,6 @@ async function beginRoundView() {
   await mutate(gs => {
     ensureInitialPeekState(gs);
     gs.initialPeekDone[myId] = true;
-    // Clear any pre-existing knowledge of own cards 2 & 3 so they render face-down
-    ensureKnowledge(gs);
-    delete gs.knownCards[myId][cardKey(myId, 2)];
-    delete gs.knownCards[myId][cardKey(myId, 3)];
     gs.lastAction = `${myName} is ready.`;
   });
 }
@@ -2816,7 +2758,6 @@ async function spyCard(ownerId, index) {
   // Slide the drawn 9/10 to the discard pile
   playDiscardAnimation('abilityPreview');
   await mutate(gs => {
-    markKnown(gs, myId, ownerId, index);
     gs.discard.push(gs.drawnCard);
     gs.drawnCard = null;
     gs.drawnFrom = '';
@@ -2881,21 +2822,8 @@ async function abilitySwapCommit(myIndex) {
     const oppCard = gs.hands[oppId][oppIndex];
     gs.hands[myId][myIndex]   = oppCard;
     gs.hands[oppId][oppIndex] = myCard;
-    if (isSwapPeek) {
-      // Q: mark the received card as known (we peeked it), forget the given-away slot
-      markKnown(gs, myId, myId, myIndex);
-      delete gs.knownCards?.[myId]?.[cardKey(oppId, oppIndex)];
-    } else {
-      // J: blind swap — forget both swapped slots for the active player
-      delete gs.knownCards?.[myId]?.[cardKey(myId, myIndex)];   // received card (unknown)
-      delete gs.knownCards?.[myId]?.[cardKey(oppId, oppIndex)]; // given-away slot (now has our old card)
-    }
-    // Also clear any other player's stale knowledge of both swapped slots
-    for (const pid of Object.keys(gs.knownCards || {})) {
-      if (pid === myId) continue;
-      delete gs.knownCards[pid][cardKey(myId, myIndex)];
-      delete gs.knownCards[pid][cardKey(oppId, oppIndex)];
-    }
+    // (For Q: the received card is shown via the showPeek overlay below; no
+    // persistent knowledge entry is created — the player must memorize.)
     gs.discard.push(gs.drawnCard);
     gs.drawnCard = null;
     gs.drawnFrom = '';
@@ -2938,9 +2866,11 @@ async function peekSwapOpp(oppId, oppIndex) {
 
   // Advance abilityTarget to the decision step
   abilityTarget = { type: 'peek_swap_decide', oppId, oppIndex };
-  // Mark as known so it stays visible while deciding; also broadcast peek indicator
+  // Broadcast a peek indicator so other players see the slot was peeked.
+  // The peeked card itself is shown via the 4-second overlay; no persistent
+  // knowledge is stored — the player relies on memory and on the peeked-value
+  // shown in the action-area message during the decide phase.
   await mutate(gs => {
-    markKnown(gs, myId, oppId, oppIndex);
     gs.peekIndicator = { peekerId: myId, ownerId: oppId, index: oppIndex };
   });
   // Auto-clear peek indicator after 4s
@@ -2967,6 +2897,10 @@ async function peekSwapCommit(myIndex) {
     renderGame(gs);
     return;
   }
+  // Dismiss the peek overlay (and clear tempPeekCard) BEFORE the mutate.
+  // Without this, the opponent slot would stay rendered face-up — but with the
+  // new content swapped in — which is exactly the "showing both cards" bug.
+  dismissPeekOverlay();
   playSwapAnimation(`my_${myIndex}`, `opp_${oppId}_${oppIndex}`, null);
   // Drawn K slides to the discard pile in parallel with the swap animation
   playDiscardAnimation('abilityPreview');
@@ -2975,15 +2909,9 @@ async function peekSwapCommit(myIndex) {
     const oppCard = gs.hands[oppId][oppIndex];
     gs.hands[myId][myIndex]   = oppCard;
     gs.hands[oppId][oppIndex] = myCard;
-    // We already know the card we swapped in (we peeked it); mark the given-away as unknown
-    markKnown(gs, myId, myId, myIndex); // keep knowing oppCard now at myIndex
-    delete gs.knownCards?.[myId]?.[cardKey(oppId, oppIndex)]; // myCard is now there — unknown to us
-    // Clear stale knowledge of both swapped slots for all other players
-    for (const pid of Object.keys(gs.knownCards || {})) {
-      if (pid === myId) continue;
-      delete gs.knownCards[pid][cardKey(myId, myIndex)];
-      delete gs.knownCards[pid][cardKey(oppId, oppIndex)];
-    }
+    // House rule: K is "peek then swap" — the player got the 4-second peek
+    // before deciding. After committing, the new card goes face-down to them
+    // too. No persistent knowledge tracking; memorize what you peek.
     gs.discard.push(gs.drawnCard);
     gs.drawnCard = null;
     gs.drawnFrom = '';
@@ -3011,7 +2939,7 @@ async function peekOwnCard(i) {
   // Slide the drawn 7/8 to the discard pile
   playDiscardAnimation('abilityPreview');
   await mutate(gs => {
-    // Do NOT markKnown — the peek is temporary; card flips back after overlay closes
+    // The 4-second peek overlay is the player's only look at this card — once it closes the card goes face-down and memory takes over.
     gs.discard.push(gs.drawnCard);
     gs.drawnCard = null;
     gs.drawnFrom = '';
@@ -3036,6 +2964,9 @@ async function skipAbility() {
   const kDecideTarget = wasKDecide
     ? { oppId: abilityTarget.oppId, oppIndex: abilityTarget.oppIndex }
     : null;
+  // Dismiss any lingering peek overlay so the opp slot doesn't stay highlighted
+  // after we've forgotten it.
+  if (wasKDecide) dismissPeekOverlay();
   // Animate the drawn card sliding to the discard pile (the action area is
   // about to disappear when phase flips to 'done').
   playDiscardAnimation('abilityPreview');
@@ -3049,10 +2980,6 @@ async function skipAbility() {
     gs.drawnFrom = '';
     gs.phase = 'done';
     gs.swapHalos = [];
-    // For K peek_swap_decide: forget the peeked opponent card if player chooses not to swap
-    if (kDecideTarget) {
-      if (gs.knownCards?.[myId]) delete gs.knownCards[myId][cardKey(kDecideTarget.oppId, kDecideTarget.oppIndex)];
-    }
     gs.lastAction = `${myName} skipped the ability.`;
   });
   abilityTarget = null;
@@ -3321,7 +3248,6 @@ async function burnFireSelection() {
         // remaining opp slots stay null (already nulled by the burn loop above).
       }
 
-      forgetMissingCards(gs);
       // Green halos on cards pushed to opponents
       gs.pushHalos = removedFromOpp.map(o => ({ ownerId: o.ownerId, index: o.idx }));
       gs.fireHalos = [];
@@ -3454,8 +3380,6 @@ async function burnFireSelection() {
         }
       }
 
-      forgetMissingCards(gs);
-
       gs.pushHalos = removedFromOpp.map(o => ({ ownerId: o.ownerId, index: o.idx }));
       gs.fireHalos = [];
       didValidBurn = true;
@@ -3562,7 +3486,6 @@ function _endFireAndRestore(gs) {
       }
     }
   }
-  forgetMissingCards(gs);
 }
 
 
@@ -3573,14 +3496,6 @@ function advanceTurn(gs) {
   gs.pushHalos = [];
   gs.peekIndicator = null; // clear peek indicator
   tempPeekCard = null; // clear any lingering peek
-
-  // Wipe ALL knownCards for ALL players on every turn end.
-  // Revealed cards (spy, peek, swap) are temporary — memory is the player's job.
-  if (gs.knownCards) {
-    for (const pid of Object.keys(gs.knownCards)) {
-      gs.knownCards[pid] = {};
-    }
-  }
 
   const idx = gs.players.findIndex(p => p.id === gs.currentTurn);
   const nextIdx = (idx + 1) % gs.players.length;
@@ -3679,7 +3594,6 @@ async function nextRound() {
     gs.drawnCard = null;
     gs.drawnFrom = '';
     gs.phase = 'draw';
-    gs.knownCards = createInitialKnowledge(players);
     gs.initialPeekDone = createInitialPeekState(players);
     gs.fire = null;
     gs.swapHalos = [];
@@ -3721,14 +3635,22 @@ function showPeek(msg, card, ownerId, index) {
   if (peekTimeout) clearTimeout(peekTimeout);
   peekTimeout = setTimeout(closePeek, 4000);
 }
+// Dismiss the peek overlay WITHOUT the closePeek flip-back animation.
+// Used when the player has acted on the peeked card (swap or skip) — at that
+// point the slot's content is changing anyway, so we just want to take down
+// the overlay and clear the lingering tempPeekCard before the mutate runs.
+function dismissPeekOverlay() {
+  document.getElementById('peekOverlay').classList.remove('show');
+  tempPeekCard = null;
+  if (peekTimeout) { clearTimeout(peekTimeout); peekTimeout = null; }
+}
+
 function closePeek() {
   document.getElementById('peekOverlay').classList.remove('show');
   const peeked = tempPeekCard;
-  // Decide whether the just-revealed card needs a flip-back animation.
-  // After tempPeekCard clears, the card is face-up only if isKnownTo is true
-  // (e.g. spy 9/10, K mid-decide). For peek_own (7/8) it is not markKnown,
-  // so it will go from face-up → face-down and deserves an animated flip.
-  if (peeked && !isKnownTo(myId, peeked.ownerId, peeked.index)) {
+  // Every peek transitions from face-up to face-down when the overlay closes —
+  // there's no persistent "I know this" state anymore. Always play the flip-back.
+  if (peeked) {
     const elId = peeked.ownerId === myId
       ? `my_${peeked.index}`
       : `opp_${peeked.ownerId}_${peeked.index}`;
@@ -4014,6 +3936,57 @@ async function backToLobby() {
   roomCode = '';
   gameState = null;
   showScreen('lobbyScreen');
+}
+
+// Host-triggered: reset the shared room state back to a fresh lobby without
+// closing any sockets. Every connected client receives the broadcast and
+// transitions to the waiting room automatically — no need to re-enter the
+// room code.
+async function playAgain() {
+  if (!isHost) return;
+  await mutate(gs => {
+    // Preserve players (and roomCode/socket implicitly). Reset everything else.
+    gs.phase = 'lobby';
+    gs.round = 0;
+    gs.scores = {};
+    gs.deck = [];
+    gs.hands = {};
+    gs.discard = [];
+    gs.currentTurn = null;
+    gs.cabo = null;
+    gs.caboLastRound = false;
+    gs.drawnCard = null;
+    gs.drawnFrom = '';
+    gs.initialPeekDone = {};
+    gs.fire = null;
+    gs.preFireSnapshot = null;
+    gs.swapHalos = [];
+    gs.fireHalos = [];
+    gs.fireAnimEvent = null;
+    gs.pushHalos = [];
+    gs.peekIndicator = null;
+    gs.roundScores = null;
+    gs.rawHandScores = null;
+    gs.revealedHands = false;
+    gs.gameOver = false;
+    gs.winner = null;
+    gs.lastAction = '';
+    gs.burnWindow = null;
+    gs.caboBurnWindow = null;
+    gs.caboCallWindow = null;
+    gs._fireStartedInCaboBurnWindow = false;
+  });
+  // Reset all local-only UI state so the next game starts clean for the host.
+  // (Non-host clients hit the same reset path in the socket message handler.)
+  selectedHandIndex = -1;
+  drawnCard = null;
+  abilityTarget = null;
+  fireSelection = [];
+  tempPeekCard = null;
+  window._winnerShown = false;
+  window._initialFlipShownFor = null;
+  window._seenFireEvents = new Set();
+  showScreen('waitingScreen');
 }
 
 // ═══════════════════════════════════════════
