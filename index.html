@@ -2731,8 +2731,11 @@ async function selectHandCard(i) {
   const gs = gameState;
   if (!gs || gs.currentTurn !== myId) return;
   if (gs.phase === 'action') {
-    // Play swap animation between drawn-card preview and hand card
+    // Play swap animation between drawn-card preview and hand card.
+    // The drawn card lands in the hand; the OLD hand card flies to the discard
+    // pile — slide it for the same visual closure as the ability paths.
     playSwapAnimation('drawnPreview', `my_${i}`, null);
+    playDiscardAnimation(`my_${i}`);
     await mutate(gs => {
       const old = gs.hands[myId][i];
       gs.hands[myId][i] = gs.drawnCard;
@@ -2762,6 +2765,8 @@ async function selectHandCard(i) {
 async function discardDrawn() {
   const gs = gameState;
   if (!gs || gs.currentTurn !== myId || gs.phase !== 'action') return;
+  // Animate the drawn card sliding from the action area to the discard pile
+  playDiscardAnimation('drawnPreview');
   await mutate(gs => {
     gs.discard.push(gs.drawnCard);
     gs.drawnCard = null;
@@ -2802,9 +2807,14 @@ async function spyCard(ownerId, index) {
   if (!abilityTarget || abilityTarget.type !== 'spy') return;
   const gs = gameState;
   if (!gs || gs.currentTurn !== myId) return;
+  // Defensive: spy targets opponents only (the UI already enforces this; this
+  // is a contract guard so a programmatic call can't break the rule).
+  if (ownerId === myId) return;
   const card = gs.hands[ownerId]?.[index];
   if (!card) return;
   showPeek(`${gs.players.find(p=>p.id===ownerId)?.name}'s card:`, card, ownerId, index);
+  // Slide the drawn 9/10 to the discard pile
+  playDiscardAnimation('abilityPreview');
   await mutate(gs => {
     markKnown(gs, myId, ownerId, index);
     gs.discard.push(gs.drawnCard);
@@ -2828,6 +2838,11 @@ async function spyCard(ownerId, index) {
 function abilityPickOpp(oppId, oppIndex) {
   const needsType = abilityTarget?.type;
   if (needsType !== 'blind_swap' && needsType !== 'swap_peek') return;
+  // Defensive: J/Q target opponents only.
+  if (oppId === myId) return;
+  // Defensive: opp slot must currently hold a card.
+  const oppCard = gameState?.hands?.[oppId]?.[oppIndex];
+  if (!oppCard) { showToast('That card is no longer available — pick again.'); return; }
   abilityTarget.oppId    = oppId;
   abilityTarget.oppIndex = oppIndex;
   // Advance to "pick your own card" step
@@ -2856,8 +2871,10 @@ async function abilitySwapCommit(myIndex) {
   // Capture the card we'll receive before mutating, so we can show it after
   const receivedCard = gs.hands[oppId]?.[oppIndex];
 
-  // Play swap animation between the two card elements
+  // Play swap animation between the two card elements, AND animate the drawn
+  // J/Q sliding to the discard pile in parallel (different overlay, no conflict).
   playSwapAnimation(`my_${myIndex}`, `opp_${oppId}_${oppIndex}`, null);
+  playDiscardAnimation('abilityPreview');
 
   await mutate(gs => {
     const myCard  = gs.hands[myId][myIndex];
@@ -2911,6 +2928,8 @@ async function peekSwapOpp(oppId, oppIndex) {
   if (abilityTarget?.type !== 'peek_swap') return;
   const gs = gameState;
   if (!gs || gs.currentTurn !== myId) return;
+  // Defensive: K's peek-swap targets opponents only.
+  if (oppId === myId) return;
   const card = gs.hands[oppId]?.[oppIndex];
   if (!card) return;
 
@@ -2949,6 +2968,8 @@ async function peekSwapCommit(myIndex) {
     return;
   }
   playSwapAnimation(`my_${myIndex}`, `opp_${oppId}_${oppIndex}`, null);
+  // Drawn K slides to the discard pile in parallel with the swap animation
+  playDiscardAnimation('abilityPreview');
   await mutate(gs => {
     const myCard  = gs.hands[myId][myIndex];
     const oppCard = gs.hands[oppId][oppIndex];
@@ -2975,8 +2996,20 @@ async function peekSwapCommit(myIndex) {
 }
 
 async function peekOwnCard(i) {
-  const card = gameState.hands[myId][i];
+  const gs = gameState;
+  // Defensive: same shape of guards used by the other ability handlers.
+  if (!gs || gs.currentTurn !== myId || gs.phase !== 'ability') return;
+  if (abilityTarget?.type !== 'peek_own') return;
+  const card = gs.hands[myId]?.[i];
+  if (!card) {
+    // The slot was burned by an interrupting fire (or otherwise emptied).
+    // Don't waste the drawn 7/8 — let the player pick again.
+    showToast('That card is no longer there — pick again.');
+    return;
+  }
   showPeek('Your card:', card, myId, i);
+  // Slide the drawn 7/8 to the discard pile
+  playDiscardAnimation('abilityPreview');
   await mutate(gs => {
     // Do NOT markKnown — the peek is temporary; card flips back after overlay closes
     gs.discard.push(gs.drawnCard);
@@ -2993,9 +3026,23 @@ async function peekOwnCard(i) {
       mutate(gs => { gs.peekIndicator = null; });
     }
   }, 4000);
+  abilityTarget = null;
 }
 
 async function skipAbility() {
+  // Capture the K-skip target before mutate so the flip-back animation runs on
+  // the actual peeked opp card.
+  const wasKDecide = abilityTarget?.type === 'peek_swap_decide';
+  const kDecideTarget = wasKDecide
+    ? { oppId: abilityTarget.oppId, oppIndex: abilityTarget.oppIndex }
+    : null;
+  // Animate the drawn card sliding to the discard pile (the action area is
+  // about to disappear when phase flips to 'done').
+  playDiscardAnimation('abilityPreview');
+  // For K-skip: flip the peeked opp card back to face-down as we forget it.
+  if (kDecideTarget) {
+    playFlipBack(`opp_${kDecideTarget.oppId}_${kDecideTarget.oppIndex}`);
+  }
   await mutate(gs => {
     gs.discard.push(gs.drawnCard);
     gs.drawnCard = null;
@@ -3003,9 +3050,8 @@ async function skipAbility() {
     gs.phase = 'done';
     gs.swapHalos = [];
     // For K peek_swap_decide: forget the peeked opponent card if player chooses not to swap
-    if (abilityTarget?.type === 'peek_swap_decide') {
-      const { oppId, oppIndex } = abilityTarget;
-      if (gs.knownCards?.[myId]) delete gs.knownCards[myId][cardKey(oppId, oppIndex)];
+    if (kDecideTarget) {
+      if (gs.knownCards?.[myId]) delete gs.knownCards[myId][cardKey(kDecideTarget.oppId, kDecideTarget.oppIndex)];
     }
     gs.lastAction = `${myName} skipped the ability.`;
   });
@@ -3677,6 +3723,17 @@ function showPeek(msg, card, ownerId, index) {
 }
 function closePeek() {
   document.getElementById('peekOverlay').classList.remove('show');
+  const peeked = tempPeekCard;
+  // Decide whether the just-revealed card needs a flip-back animation.
+  // After tempPeekCard clears, the card is face-up only if isKnownTo is true
+  // (e.g. spy 9/10, K mid-decide). For peek_own (7/8) it is not markKnown,
+  // so it will go from face-up → face-down and deserves an animated flip.
+  if (peeked && !isKnownTo(myId, peeked.ownerId, peeked.index)) {
+    const elId = peeked.ownerId === myId
+      ? `my_${peeked.index}`
+      : `opp_${peeked.ownerId}_${peeked.index}`;
+    playFlipBack(elId);
+  }
   tempPeekCard = null;
   if (gameState) renderGame(gameState);
 }
@@ -3836,6 +3893,101 @@ function playDrawAnimation(fromElId) {
       }, DUR - 40);
     }, 40);
   });
+}
+
+// Slide the drawn card from the action area to the discard pile.
+// Capture position BEFORE the mutate that clears gs.drawnCard, so the flying
+// card has a real start position. The clone lives in #drawAnimOverlay and is
+// immune to re-renders triggered by mutate.
+function playDiscardAnimation(fromId) {
+  const overlay = document.getElementById('drawAnimOverlay');
+  const fromEl  = document.getElementById(fromId);
+  const toEl    = document.getElementById('discardCard');
+  if (!overlay || !fromEl || !toEl) return;
+  const fr = fromEl.getBoundingClientRect();
+  const tr = toEl.getBoundingClientRect();
+  const fx = fr.left + fr.width / 2, fy = fr.top + fr.height / 2;
+  const tx = tr.left + tr.width / 2, ty = tr.top + tr.height / 2;
+  // Clone the drawn card's current rendered HTML so we keep the exact face-up content
+  const innerHTML = fromEl.innerHTML;
+  overlay.classList.add('active');
+  const card = document.createElement('div');
+  card.className = 'draw-flying';
+  card.innerHTML = innerHTML;
+  card.style.left = fx + 'px';
+  card.style.top  = fy + 'px';
+  card.style.opacity = '1';
+  // Match the visual size of the source preview rather than the default 72×108,
+  // so the flying card lines up cleanly with where the user just saw it.
+  card.style.width  = fr.width + 'px';
+  card.style.height = fr.height + 'px';
+  card.style.background = '#fff';
+  overlay.appendChild(card);
+  const DUR = 380;
+  requestAnimationFrame(() => {
+    card.style.transition =
+      `left ${DUR}ms cubic-bezier(0.4,0,0.2,1), ` +
+      `top ${DUR}ms cubic-bezier(0.4,0,0.2,1), ` +
+      `transform ${DUR}ms cubic-bezier(0.4,0,0.2,1), ` +
+      `opacity 120ms ease ${DUR - 100}ms`;
+    card.style.left = tx + 'px';
+    card.style.top  = ty + 'px';
+    card.style.transform = 'translate(-50%,-50%) scale(0.92) rotate(7deg)';
+    setTimeout(() => {
+      card.style.opacity = '0';
+      setTimeout(() => {
+        card.remove();
+        // Only clear overlay if no other flying cards remain
+        if (!overlay.querySelector('.draw-flying')) overlay.classList.remove('active');
+      }, 150);
+    }, DUR - 40);
+  });
+}
+
+// Animate a card flipping from face-up back to face-down. Uses a clone overlay
+// so the animation survives the renderGame() call that swaps the underlying DOM.
+// elId: the id of the face-up card element to flip (e.g. 'opp_xxx_2', 'my_3').
+function playFlipBack(elId) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  const rect = el.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) return;
+  const clone = document.createElement('div');
+  // Copy the card's current visual class set (minus selection / animation classes
+  // so the clone looks clean) and its face-up content
+  const baseCls = (el.className || '')
+    .split(/\s+/)
+    .filter(c => c && c !== 'flip-reveal' && c !== 'flip-hide' && c !== 'selected' && c !== 'fire-selected' && c !== 'clickable')
+    .join(' ');
+  clone.className = baseCls + ' peek-flip-clone';
+  clone.innerHTML = el.innerHTML;
+  clone.style.cssText =
+    `position:fixed;` +
+    `left:${rect.left}px;` +
+    `top:${rect.top}px;` +
+    `width:${rect.width}px;` +
+    `height:${rect.height}px;` +
+    `z-index:600;` +
+    `pointer-events:none;` +
+    `transform-origin:center;` +
+    `transition:transform 200ms cubic-bezier(0.4,0,0.2,1);` +
+    `margin:0;`;
+  document.body.appendChild(clone);
+  // Phase 1: shrink to edge-on
+  requestAnimationFrame(() => {
+    clone.style.transform = 'scaleX(0)';
+  });
+  // Phase 2: at midpoint, swap content to face-down and expand back
+  setTimeout(() => {
+    clone.classList.remove('face-up', 'red-suit');
+    clone.classList.add('face-down');
+    clone.innerHTML = cardBackSVG();
+    clone.style.transform = 'scaleX(1)';
+  }, 210);
+  // Phase 3: cleanup — by now the real card underneath has already been
+  // re-rendered as face-down (or will be very shortly), so removing the clone
+  // reveals it seamlessly.
+  setTimeout(() => clone.remove(), 460);
 }
 
 // Brief 3D flip animation on slots 2/3 — used at the start of a round
