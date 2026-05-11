@@ -808,6 +808,477 @@
     width: 52px; height: 78px;
   }
   .fire-flying-card svg { width: 100%; height: 100%; display: block; }
+
+  /* ═══════════════════════════════════════════
+     PREMIUM UI ENHANCEMENTS
+     ═══════════════════════════════════════════ */
+
+  /* Card 3D edge — stacked shadows give the card visible thickness */
+  .card.face-down {
+    box-shadow:
+      1px 1px 0 -0.5px #2a3a52,
+      2px 2px 0 -0.5px #1d2d44,
+      3px 3px 0 -0.5px #15243a,
+      0 5px 14px rgba(0,0,0,0.55);
+  }
+  .card.face-up {
+    box-shadow:
+      1px 1px 0 -0.5px #d4c8a8,
+      2px 2px 0 -0.5px #b8a888,
+      3px 3px 0 -0.5px #9a8868,
+      0 5px 14px rgba(0,0,0,0.4);
+  }
+  .card.small.face-down {
+    box-shadow:
+      1px 1px 0 -0.5px #2a3a52,
+      2px 2px 0 -0.5px #15243a,
+      0 4px 10px rgba(0,0,0,0.5);
+  }
+  .card.small.face-up {
+    box-shadow:
+      1px 1px 0 -0.5px #d4c8a8,
+      2px 2px 0 -0.5px #9a8868,
+      0 4px 10px rgba(0,0,0,0.4);
+  }
+
+  /* Hover lift — only for cards that are actually clickable */
+  .card { cursor: default; }
+  .card.clickable { cursor: pointer; }
+  .card.clickable:hover {
+    transform: translateY(-6px) scale(1.04);
+    z-index: 5;
+  }
+  .card.clickable.face-down:hover {
+    box-shadow:
+      1px 1px 0 -0.5px #2a3a52,
+      2px 2px 0 -0.5px #1d2d44,
+      3px 3px 0 -0.5px #15243a,
+      0 14px 28px rgba(0,0,0,0.7),
+      0 0 0 2px rgba(201,168,76,0.45);
+  }
+  .card.clickable.face-up:hover {
+    box-shadow:
+      1px 1px 0 -0.5px #d4c8a8,
+      2px 2px 0 -0.5px #b8a888,
+      3px 3px 0 -0.5px #9a8868,
+      0 14px 28px rgba(0,0,0,0.6),
+      0 0 0 2px rgba(201,168,76,0.65);
+  }
+  /* Non-clickable cards should not respond to the generic .card:hover */
+  .card:not(.clickable):hover { transform: none; box-shadow: inherit; }
+
+  /* Layered pile stack — visible depth for deck and discard */
+  .pile-stack {
+    position: relative;
+    width: 72px;
+    height: 108px;
+  }
+  .pile-stack > .card { position: relative; z-index: 3; }
+  .pile-stack::before,
+  .pile-stack::after {
+    content: '';
+    position: absolute;
+    width: 72px; height: 108px;
+    border-radius: 8px;
+    background: var(--card-back);
+    border: 1px solid rgba(201,168,76,0.18);
+    pointer-events: none;
+  }
+  .pile-stack[data-depth="2"]::before,
+  .pile-stack[data-depth="3"]::before {
+    left: 2px; top: 2px; z-index: 2;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.35);
+  }
+  .pile-stack[data-depth="3"]::after {
+    left: 4px; top: 4px; z-index: 1;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  }
+  /* Hide both pseudo-stack cards when depth is 0 or 1 */
+  .pile-stack[data-depth="0"]::before,
+  .pile-stack[data-depth="0"]::after,
+  .pile-stack[data-depth="1"]::before,
+  .pile-stack[data-depth="1"]::after,
+  .pile-stack[data-depth="2"]::after { display: none; }
+
+  /* Initial-peek flip — applied to slots 2/3 on round start and on Begin */
+  @keyframes flipReveal {
+    0%   { transform: rotateY(-180deg); opacity: 0.4; }
+    50%  { transform: rotateY(-90deg)  scaleY(1.04); opacity: 0.9; }
+    100% { transform: rotateY(0deg); opacity: 1; }
+  }
+  @keyframes flipHide {
+    0%   { transform: rotateY(0deg); }
+    50%  { transform: rotateY(90deg) scaleY(1.04); }
+    100% { transform: rotateY(180deg); }
+  }
+  .card.flip-reveal {
+    animation: flipReveal 0.55s cubic-bezier(0.4,0,0.2,1) both;
+    transform-origin: center;
+  }
+  .card.flip-hide {
+    animation: flipHide 0.45s cubic-bezier(0.4,0,0.2,1) both;
+    transform-origin: center;
+  }
+
+  /* Pulsing turn beacon (replaces the small .turn-indicator dot) */
+  .turn-beacon {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #e8c96e 0%, #c9a84c 60%, #8a6a20 100%);
+    box-shadow: 0 0 0 0 rgba(201,168,76,0.7);
+    animation: beaconPulse 1.6s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+  @keyframes beaconPulse {
+    0%   { box-shadow: 0 0 0 0 rgba(201,168,76,0.7), 0 0 8px 2px rgba(232,201,110,0.3); }
+    70%  { box-shadow: 0 0 0 10px rgba(201,168,76,0), 0 0 14px 5px rgba(232,201,110,0.5); }
+    100% { box-shadow: 0 0 0 0 rgba(201,168,76,0), 0 0 8px 2px rgba(232,201,110,0.3); }
+  }
+
+  /* Felt table — replaces the flat green with felt grain + candle vignette */
+  body {
+    background: radial-gradient(ellipse at center, #1a3a1e 0%, #0d1f0f 60%, #07140a 100%);
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      url("data:image/svg+xml;utf8,%3Csvg viewBox='0 0 220 220' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.04 0 0 0 0 0.10 0 0 0 0 0.04 0 0 0 0.55 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E"),
+      radial-gradient(ellipse at 20% 50%, rgba(42,92,48,0.20) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 20%, rgba(26,58,30,0.28) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.85;
+  }
+  /* Candle flicker + vignette */
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(circle at 8% 10%, rgba(255,200,100,0.07), transparent 26%),
+      radial-gradient(circle at 92% 10%, rgba(255,200,100,0.06), transparent 26%),
+      radial-gradient(ellipse at center, transparent 38%, rgba(0,0,0,0.55) 100%);
+    pointer-events: none;
+    z-index: 0;
+    animation: candleFlicker 5s ease-in-out infinite;
+  }
+  @keyframes candleFlicker {
+    0%, 100% { opacity: 1; }
+    35%      { opacity: 0.92; }
+    55%      { opacity: 0.97; }
+    78%      { opacity: 0.9; }
+  }
+
+  /* Turn-order ribbon */
+  .turn-ribbon {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 14px;
+    margin: 0 auto 8px;
+    max-width: 720px;
+    background: linear-gradient(180deg, rgba(13,21,9,0.65), rgba(13,21,9,0.88));
+    border: 1px solid rgba(201,168,76,0.28);
+    border-radius: 22px;
+    backdrop-filter: blur(8px);
+    font-family: 'Cinzel', serif;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.4), inset 0 1px 0 rgba(201,168,76,0.08);
+    flex-wrap: wrap;
+  }
+  .turn-ribbon-avatar {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 3px 8px;
+    border-radius: 14px;
+    transition: all 0.3s;
+    min-width: 44px;
+  }
+  .turn-ribbon-avatar.active {
+    background: rgba(201,168,76,0.18);
+    box-shadow: 0 0 14px rgba(201,168,76,0.32), inset 0 0 0 1px rgba(232,201,110,0.5);
+  }
+  .turn-ribbon-circle {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: var(--green-mid);
+    border: 1.5px solid var(--gold-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gold-light);
+    font-weight: 700;
+    font-size: 11px;
+    position: relative;
+  }
+  .turn-ribbon-avatar.active .turn-ribbon-circle {
+    background: linear-gradient(135deg, #e8c96e, #8a6a20);
+    border-color: var(--gold-light);
+    color: #1a1a05;
+    box-shadow: 0 0 0 0 rgba(201,168,76,0.6);
+    animation: beaconPulse 1.6s ease-in-out infinite;
+  }
+  .turn-ribbon-name {
+    font-size: 9px;
+    color: var(--muted);
+    text-transform: uppercase;
+    max-width: 60px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .turn-ribbon-avatar.active .turn-ribbon-name { color: var(--gold-light); }
+  .turn-ribbon-avatar.me .turn-ribbon-name { color: #6abf70; }
+  .turn-ribbon-arrow {
+    color: rgba(201,168,76,0.45);
+    font-size: 11px;
+  }
+  .turn-ribbon-cabo-badge {
+    position: absolute;
+    top: -6px; right: -2px;
+    background: var(--crimson);
+    color: #fff;
+    font-size: 7px;
+    padding: 1px 4px;
+    border-radius: 3px;
+    letter-spacing: 0.05em;
+    font-weight: 700;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+  }
+  .turn-ribbon-conn {
+    position: absolute;
+    bottom: -1px; right: 4px;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    border: 1.5px solid #0d1f0f;
+    background: #6abf70;
+    box-shadow: 0 0 4px rgba(106,191,112,0.6);
+  }
+
+  /* Ability cheat-sheet button + panel */
+  #abilityCheatSheetBtn {
+    position: fixed;
+    bottom: 16px; left: 16px;
+    z-index: 150;
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(60,40,0,0.95), rgba(30,20,0,0.95));
+    border: 1px solid rgba(201,168,76,0.5);
+    color: var(--gold-light);
+    font-family: 'Cinzel', serif;
+    font-size: 20px;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.55);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  #abilityCheatSheetBtn.show { display: flex; }
+  #abilityCheatSheetBtn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 18px rgba(201,168,76,0.4);
+  }
+  #abilityCheatSheet {
+    position: fixed;
+    bottom: 68px; left: 16px;
+    z-index: 149;
+    width: 260px;
+    background: linear-gradient(180deg, rgba(20,15,5,0.97), rgba(8,4,2,0.97));
+    border: 1px solid rgba(201,168,76,0.45);
+    border-radius: 6px;
+    padding: 14px 16px;
+    font-family: 'IM Fell English', serif;
+    color: var(--cream);
+    box-shadow: 0 6px 28px rgba(0,0,0,0.75);
+    display: none;
+  }
+  #abilityCheatSheet.show {
+    display: block;
+    animation: cheatFadeIn 0.25s ease-out;
+  }
+  @keyframes cheatFadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  #abilityCheatSheet h3 {
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    color: var(--gold);
+    letter-spacing: 0.18em;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    border-bottom: 1px solid rgba(201,168,76,0.2);
+    padding-bottom: 6px;
+  }
+  #abilityCheatSheet .cheat-row {
+    display: flex;
+    gap: 8px;
+    padding: 4px 0;
+    align-items: flex-start;
+  }
+  #abilityCheatSheet .cheat-key {
+    flex: 0 0 40px;
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    color: var(--gold-light);
+    font-size: 12px;
+    line-height: 1.4;
+  }
+  #abilityCheatSheet .cheat-desc {
+    flex: 1;
+    font-size: 11.5px;
+    color: var(--cream);
+    line-height: 1.4;
+  }
+  #abilityCheatSheet .cheat-section-title {
+    font-family: 'Cinzel', serif;
+    font-size: 9.5px;
+    color: var(--gold-dark);
+    letter-spacing: 0.18em;
+    margin-top: 10px;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+  }
+
+  /* Parchment-scroll game log */
+  .game-log {
+    background:
+      linear-gradient(180deg, rgba(60,40,15,0.18), rgba(40,25,10,0.32)),
+      url("data:image/svg+xml;utf8,%3Csvg viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0.45 0 0 0 0 0.32 0 0 0 0 0.15 0 0 0 0.18 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23p)'/%3E%3C/svg%3E");
+    border: 1px solid rgba(201,168,76,0.22);
+    border-radius: 4px;
+    box-shadow:
+      inset 0 0 28px rgba(60,30,0,0.45),
+      inset 0 1px 0 rgba(201,168,76,0.15),
+      0 4px 14px rgba(0,0,0,0.4);
+    position: relative;
+    padding: 10px 16px;
+    color: rgba(240,232,208,0.85);
+  }
+  .game-log::before,
+  .game-log::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0;
+    height: 12px;
+    pointer-events: none;
+  }
+  .game-log::before {
+    top: -1px;
+    background: linear-gradient(180deg, rgba(40,25,10,0.7), transparent);
+    border-bottom: 1px solid rgba(201,168,76,0.15);
+    border-radius: 4px 4px 0 0;
+  }
+  .game-log::after {
+    bottom: -1px;
+    background: linear-gradient(0deg, rgba(40,25,10,0.7), transparent);
+    border-top: 1px solid rgba(201,168,76,0.15);
+    border-radius: 0 0 4px 4px;
+  }
+  .game-log span { padding: 1px 2px; }
+  .game-log .log-new {
+    color: var(--gold-light);
+    text-shadow: 0 0 8px rgba(232,201,110,0.4);
+    font-weight: 600;
+  }
+
+  /* "I know this" eye watermark on face-down cards I've already peeked */
+  .card-known-eye {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: rgba(34, 100, 220, 0.88);
+    color: #fff;
+    font-size: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 6;
+    border: 1px solid #fff;
+    pointer-events: none;
+    box-shadow: 0 0 6px rgba(34,100,220,0.65);
+    font-family: sans-serif;
+  }
+
+  /* Drawn-card slide-in animation overlay */
+  #drawAnimOverlay {
+    display: none;
+    position: fixed; inset: 0;
+    z-index: 480;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  #drawAnimOverlay.active { display: block; }
+  .draw-flying {
+    position: absolute;
+    width: 72px; height: 108px;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow:
+      0 10px 30px rgba(0,0,0,0.7),
+      0 0 0 1.5px rgba(201,168,76,0.5),
+      0 0 24px rgba(201,168,76,0.3);
+    pointer-events: none;
+    will-change: transform, opacity, left, top;
+    transform: translate(-50%,-50%);
+    background: var(--card-back);
+  }
+  .draw-flying svg { width: 100%; height: 100%; display: block; }
+
+  /* Mobile responsive */
+  @media (max-width: 720px) {
+    #gameScreen { padding: 8px; }
+    .game-header { padding: 4px 8px; flex-wrap: wrap; gap: 6px; }
+    .game-logo-mini { width: 80px; height: 24px; }
+    .card { width: 56px; height: 84px; border-radius: 6px; }
+    .card.small { width: 42px; height: 63px; border-radius: 5px; }
+    .card-value { font-size: 16px; }
+    .card-suit { font-size: 13px; }
+    .card.face-up .card-corner,
+    .card.face-up .card-corner-br { font-size: 10px; top: 3px; left: 4px; }
+    .card.face-up .card-corner-br { top: auto; left: auto; bottom: 3px; right: 4px; }
+    .card.small .card-value { font-size: 12px; }
+    .card.small .card-suit { font-size: 10px; }
+    .card.small .card-corner, .card.small .card-corner-br { font-size: 8px; }
+    .center-row { gap: 18px; padding: 4px 0; }
+    .pile-area { gap: 4px; }
+    .pile-stack { width: 56px; height: 84px; }
+    .pile-stack::before,
+    .pile-stack::after { width: 56px; height: 84px; border-radius: 6px; }
+    .opponent-zone { padding: 4px; }
+    .opponent-name { font-size: 9px; }
+    .opponent-hand { gap: 4px; }
+    .my-zone-header { margin-bottom: 6px; }
+    .action-bar { padding: 4px 0; }
+    .action-msg { font-size: 12px; padding: 6px 10px; }
+    .btn { padding: 6px 12px; font-size: 11px; letter-spacing: 0.1em; }
+    .turn-ribbon { padding: 4px 8px; font-size: 9px; gap: 2px; }
+    .turn-ribbon-avatar { padding: 2px 4px; min-width: 36px; }
+    .turn-ribbon-circle { width: 22px; height: 22px; font-size: 10px; }
+    .turn-ribbon-name { font-size: 8px; max-width: 44px; }
+    #abilityCheatSheet { width: 220px; font-size: 10px; bottom: 60px; }
+    .game-log { max-height: 64px; font-size: 10px; padding: 8px 10px; }
+    .side-left .opponent-zone,
+    .side-right .opponent-zone { width: 100px; }
+  }
+  @media (max-width: 420px) {
+    .card { width: 48px; height: 72px; }
+    .card.small { width: 36px; height: 54px; }
+    .pile-stack { width: 48px; height: 72px; }
+    .pile-stack::before,
+    .pile-stack::after { width: 48px; height: 72px; }
+    .game-header { padding: 4px; }
+    .side-left, .side-right { display: none !important; }
+  }
 </style>
 </head>
 <body>
@@ -952,6 +1423,9 @@
     </div>
   </div>
 
+  <!-- Turn-order ribbon — small avatar strip showing turn order, active player, and CABO state -->
+  <div id="turnRibbon" class="turn-ribbon" style="display:none"></div>
+
   <div class="table-area" id="tableArea">
     <div class="top-opponents"  id="topOpponents"></div>
     <div class="side-left"      id="sideLeft"></div>
@@ -960,12 +1434,16 @@
     <div class="center-row">
       <div class="pile-area">
         <div class="pile-label">Deck</div>
-        <div class="card face-down" id="deckCard" onclick="drawFromDeck()"></div>
+        <div class="pile-stack" id="deckStack" data-depth="3">
+          <div class="card face-down clickable" id="deckCard" onclick="drawFromDeck()"></div>
+        </div>
         <div id="deckCount" style="font-size:11px;color:var(--muted);margin-top:2px;font-family:'Cinzel',serif"></div>
       </div>
       <div class="pile-area">
         <div class="pile-label">Discard</div>
-        <div class="card face-down" id="discardCard" onclick="drawFromDiscard()"></div>
+        <div class="pile-stack" id="discardStack" data-depth="0">
+          <div class="card face-down" id="discardCard" title="Discard pile (not drawable)"></div>
+        </div>
       </div>
     </div>
 
@@ -1017,6 +1495,30 @@
 
 <!-- FIRE ANIMATION OVERLAY -->
 <div id="fireOverlay"></div>
+
+<!-- DRAW ANIMATION OVERLAY — card sliding from deck to action area -->
+<div id="drawAnimOverlay"></div>
+
+<!-- ABILITY CHEAT-SHEET — pinned reference of what each card does -->
+<button id="abilityCheatSheetBtn" onclick="toggleAbilityCheatSheet()" title="Card powers reference" aria-label="Card powers reference">?</button>
+<div id="abilityCheatSheet" role="dialog" aria-label="Card powers">
+  <h3>⚔ Card Powers</h3>
+  <div class="cheat-row"><span class="cheat-key">7 / 8</span><span class="cheat-desc">Peek at one of <strong>your own</strong> cards.</span></div>
+  <div class="cheat-row"><span class="cheat-key">9 / 10</span><span class="cheat-desc">Spy: peek at an <strong>opponent's</strong> card.</span></div>
+  <div class="cheat-row"><span class="cheat-key">J</span><span class="cheat-desc">Blind swap: swap with an opponent, no peek.</span></div>
+  <div class="cheat-row"><span class="cheat-key">Q</span><span class="cheat-desc">Swap with an opponent, then peek what you received.</span></div>
+  <div class="cheat-row"><span class="cheat-key">K</span><span class="cheat-desc">Peek an opponent's card, then choose to swap or keep.</span></div>
+  <div class="cheat-section-title">Scoring</div>
+  <div class="cheat-row"><span class="cheat-key">A</span><span class="cheat-desc">1 point</span></div>
+  <div class="cheat-row"><span class="cheat-key">2–10</span><span class="cheat-desc">face value</span></div>
+  <div class="cheat-row"><span class="cheat-key">J / Q</span><span class="cheat-desc">11 / 12</span></div>
+  <div class="cheat-row"><span class="cheat-key">K</span><span class="cheat-desc">13 (all suits)</span></div>
+  <div class="cheat-row"><span class="cheat-key">JK</span><span class="cheat-desc">−1 (joker)</span></div>
+  <div class="cheat-section-title">CABO</div>
+  <div class="cheat-row"><span class="cheat-key">Call</span><span class="cheat-desc">End your turn with a CABO call. One more turn for everyone else, then scores reveal. +5 penalty if you aren't lowest.</span></div>
+  <div class="cheat-section-title">Fire</div>
+  <div class="cheat-row"><span class="cheat-key">🔥</span><span class="cheat-desc">Pick 2+ cards (any owner) sharing one value. Everyone responds. Matching value burns clean; mismatch = 2 penalty cards.</span></div>
+</div>
 
 <!-- WINNER ANIMATION OVERLAY -->
 <div id="winnerStage">
@@ -1384,6 +1886,8 @@ async function hostGame() {
   const name = document.getElementById('playerName').value.trim();
   if (!name) { showToast('Enter your name first'); return; }
   myName = name;
+  // Persist the chosen name so returning players don't have to retype
+  try { localStorage.setItem('cabo:playerName', name); } catch (e) {}
   myId = genId();
   isHost = true;
   roomCode = genRoomCode();
@@ -1431,6 +1935,8 @@ async function joinGame() {
   if (!name) { showToast('Enter your name first'); return; }
   if (!code) { showToast('Enter a room code'); return; }
   myName = name;
+  // Persist for next time
+  try { localStorage.setItem('cabo:playerName', name); } catch (e) {}
   myId = genId();
   isHost = false;
   roomCode = code;
@@ -1517,7 +2023,8 @@ function initGameState(players) {
 function cardPoints(card) {
   if (!card) return 0;
   if (card.value === 'JK') return -1;
-  if (card.value === 'K') return card.suit === 'spade' || card.suit === 'club' ? 0 : 13;
+  // All Kings are worth 13 points regardless of suit — same ability too (peek_swap).
+  if (card.value === 'K') return 13;
   const face = { A: 1, J: 11, Q: 12 };
   return face[card.value] ?? parseInt(card.value);
 }
@@ -1604,15 +2111,20 @@ function isRed(card) {
 // ═══════════════════════════════════════════
 // CARD RENDERING (no external SVG sprite)
 // ═══════════════════════════════════════════
-function renderCardHtml(card, faceUp, extraClass, id, onclick = '') {
-  const classes = `card ${faceUp ? 'face-up' : 'face-down'} ${faceUp && isRed(card) ? 'red-suit' : ''} ${extraClass || ''}`;
-  const clickAttr = onclick ? `onclick="${onclick}"` : '';
-  const cursor = onclick ? 'pointer' : 'default';
+function renderCardHtml(card, faceUp, extraClass, id, onclick = '', opts = {}) {
+  // opts: { knownByMeFaceDown: true } — draws a small eye watermark on a
+  //   face-down card to indicate I've seen it (my own knowledge marker).
+  const isClickable = !!onclick;
+  const classes = `card ${faceUp ? 'face-up' : 'face-down'} ${faceUp && isRed(card) ? 'red-suit' : ''} ${isClickable ? 'clickable' : ''} ${extraClass || ''}`;
+  const clickAttr = isClickable ? `onclick="${onclick}"` : '';
   const label = faceUp ? cardLabel(card) : 'Card back';
+  const eyeWatermark = (!faceUp && opts.knownByMeFaceDown)
+    ? '<div class="card-known-eye" title="You\'ve seen this card">👁</div>'
+    : '';
 
   if (!faceUp) {
     // GoT card back
-    return `<div class="${classes}" id="${id}" ${clickAttr} style="cursor:${cursor}" aria-label="${escHtml(label)}">${cardBackSVG()}</div>`;
+    return `<div class="${classes}" id="${id}" ${clickAttr} aria-label="${escHtml(label)}">${eyeWatermark}${cardBackSVG()}</div>`;
   }
 
   // Face-up card
@@ -1644,7 +2156,7 @@ function renderCardHtml(card, faceUp, extraClass, id, onclick = '') {
     `;
   }
 
-  return `<div class="${classes}" id="${id}" ${clickAttr} style="cursor:${cursor}" aria-label="${escHtml(label)}">${innerHtml}</div>`;
+  return `<div class="${classes}" id="${id}" ${clickAttr} aria-label="${escHtml(label)}">${innerHtml}</div>`;
 }
 
 // ═══════════════════════════════════════════
@@ -1704,6 +2216,25 @@ function renderGame(gs) {
   // Viewer mode button — host-only debug tool
   const viewerBtn = document.getElementById('viewerModeBtn');
   if (viewerBtn) viewerBtn.style.display = isHost ? '' : 'none';
+
+  // Turn-order ribbon
+  renderTurnRibbon(gs);
+
+  // Pile depth — visual stack thickness reflects remaining cards
+  const deckStack = document.getElementById('deckStack');
+  if (deckStack) {
+    const n = gs.deck?.length || 0;
+    deckStack.dataset.depth = n >= 8 ? '3' : n >= 3 ? '2' : n >= 1 ? '1' : '0';
+  }
+  const discardStack = document.getElementById('discardStack');
+  if (discardStack) {
+    const n = gs.discard?.length || 0;
+    discardStack.dataset.depth = n >= 6 ? '3' : n >= 2 ? '2' : n >= 1 ? '1' : '0';
+  }
+
+  // Ability cheat-sheet button visible whenever we're past lobby
+  const cheatBtn = document.getElementById('abilityCheatSheetBtn');
+  if (cheatBtn) cheatBtn.classList.toggle('show', gs.phase !== 'lobby');
 
   // Opponents — rendered with POV perspective, distributed around a circular table
   // Slot assignment by opponent count:
@@ -1771,7 +2302,10 @@ function renderGame(gs) {
         : isPeekedByOther ? `<span class="peek-badge">👁 ${escHtml(peekerName)}</span>`
         : isPeekedBySelf ? '<span class="peek-badge" style="background:#1e40af">👁 You</span>'
         : '';
-      const cardHtml = renderCardHtml(known ? c : null, known, `small${nearClass}${fireSelClass}${fireSel}${haloClass}${fireHaloClass}${frozenClass}`, `opp_${p.id}_${i}`, click);
+      // Persistent "I know this" eye marker — only visible to ME on face-down opp cards I've previously peeked.
+      // We only need it when the card is rendered face-down for me (otherwise the card itself shows the value).
+      const showKnownEye = !known && isKnownTo(myId, p.id, i);
+      const cardHtml = renderCardHtml(known ? c : null, known, `small${nearClass}${fireSelClass}${fireSel}${haloClass}${fireHaloClass}${frozenClass}`, `opp_${p.id}_${i}`, click, { knownByMeFaceDown: showKnownEye });
       return hasBadge ? `<div style="position:relative;display:inline-block">${badge}${cardHtml}</div>` : cardHtml;
     };
 
@@ -1789,7 +2323,7 @@ function renderGame(gs) {
     }
 
     return `<div class="opponent-zone">
-      <div class="opponent-name">${isTurn ? '<span class="turn-indicator"></span>' : ''}${escHtml(p.name)}${gs.phase === 'end' ? ` <span style="font-size:9px;color:var(--gold-dark);margin-left:4px">${gs.scores[p.id] ?? 0}pts</span>` : ''}</div>
+      <div class="opponent-name">${isTurn ? '<span class="turn-beacon"></span>' : ''}${escHtml(p.name)}${gs.phase === 'end' ? ` <span style="font-size:9px;color:var(--gold-dark);margin-left:4px">${gs.scores[p.id] ?? 0}pts</span>` : ''}</div>
       ${topCards.length ? `<div class="opponent-hand" style="margin-bottom:5px;opacity:0.75">${topCards.join('')}</div>` : ''}
       <div class="opponent-hand">${(bottomCards.length ? bottomCards : topCards).join('')}</div>
       ${topCards.length && bottomCards.length ? `<div class="pov-label">← near you →</div>` : ''}
@@ -1800,16 +2334,24 @@ function renderGame(gs) {
   document.getElementById('sideLeft').innerHTML     = leftSlot.map(renderOppZone).join('');
   document.getElementById('sideRight').innerHTML    = rightSlot.map(renderOppZone).join('');
 
-  // Deck card (always show back)
-  const deckEl = document.getElementById('deckCard');
-  if (deckEl) deckEl.innerHTML = cardBackSVG();
+  // Whether *I* may currently draw from a pile
+  const canIDraw = gs.currentTurn === myId && gs.phase === 'draw';
 
-  // Discard — show card back when empty, face-up top card when pile has cards
+  // Deck card (always show back) — clickable only when I can draw
+  const deckEl = document.getElementById('deckCard');
+  if (deckEl) {
+    deckEl.innerHTML = cardBackSVG();
+    deckEl.classList.toggle('clickable', canIDraw);
+  }
+
+  // Discard — show card back when empty, face-up top card when pile has cards.
+  // House rule: players cannot draw FROM the discard pile (deck-only draws).
+  // We still render the face-up top card for memory/info, but it has no onclick.
   const topDiscard = gs.discard?.[gs.discard.length - 1] || null;
   const discardEl = document.getElementById('discardCard');
   if (discardEl) {
     if (topDiscard) {
-      discardEl.outerHTML = renderCardHtml(topDiscard, true, '', 'discardCard', 'drawFromDiscard()');
+      discardEl.outerHTML = renderCardHtml(topDiscard, true, '', 'discardCard', '');
     } else {
       // Empty pile: show card back graphic (no click)
       const emptyEl = document.createElement('div');
@@ -1875,7 +2417,10 @@ function renderGame(gs) {
         : isOwnPeekedBySelf ? '<span class="peek-badge" style="background:#1e40af">👁 You</span>'
         : isOwnPeekedByOther ? `<span class="peek-badge">👁 ${escHtml(ownPeekerName)}</span>`
         : '';
-      const cardHtml = renderCardHtml(known ? c : null, known, sel + fireClass + fireSel + haloClass + fireHaloClass + myCaboFrozenClass, `my_${i}`, click);
+      // Persistent eye marker on my own face-down cards I've already peeked
+      // (e.g. via 7/8 own-peek, or remembered from a previous swap-peek).
+      const showOwnKnownEye = !known && isKnownTo(myId, myId, i);
+      const cardHtml = renderCardHtml(known ? c : null, known, sel + fireClass + fireSel + haloClass + fireHaloClass + myCaboFrozenClass, `my_${i}`, click, { knownByMeFaceDown: showOwnKnownEye });
       return hasBadgeOwn ? `<div style="position:relative;display:inline-block">${badge}${cardHtml}</div>` : cardHtml;
     };
     // Layout: render all slots in a fixed 2-column grid.
@@ -1936,6 +2481,18 @@ function renderGame(gs) {
     const canFire = gs.phase !== 'lobby' && gs.phase !== 'end' && gs.phase !== 'fire'
                  && !isInitialRevealVisible(gs, myId);
     fireBtn.style.display = canFire ? '' : 'none';
+  }
+
+  // Initial-peek REVEAL animation — play once at the start of each round, when
+  // slots 2/3 first appear face-up. Tracked per round so it doesn't replay on
+  // every re-render. (The flip-back is handled in beginRoundView.)
+  if (isInitialRevealVisible(gs, myId) && document.getElementById('my_2') && document.getElementById('my_3')) {
+    const roundKey = (gs.round || 1) + ':' + myId;
+    if (window._initialFlipShownFor !== roundKey) {
+      window._initialFlipShownFor = roundKey;
+      // Wait a frame so the cards are in the DOM with their face-up content
+      requestAnimationFrame(() => playInitialPeekFlip('reveal'));
+    }
   }
 
   // Log
@@ -2042,7 +2599,7 @@ function renderActions(gs, isMyTurn, myHand) {
   if (!isMyTurn) { msg.textContent = 'Wait for your turn...'; return; }
 
   if (gs.phase === 'draw') {
-    msg.textContent = 'Draw a card from the deck or take the top discard.';
+    msg.textContent = 'Draw a card from the deck.';
   } else if (gs.phase === 'action') {
     const preview = `<div class="drawn-card-preview">${renderCardHtml(gs.drawnCard, true, '', 'drawnPreview')}</div>`;
     if (gs.drawnFrom === 'discard') {
@@ -2160,19 +2717,14 @@ async function drawFromDeck() {
     gs.phase = 'action';
     gs.lastAction = (wasEmpty ? '🔄 Discard reshuffled into deck. ' : '') + `${myName} drew from the deck.`;
   });
+  // Slide a card-back from the deck to the drawn-preview area (only animates for me)
+  requestAnimationFrame(() => playDrawAnimation('deckCard'));
 }
 
 async function drawFromDiscard() {
-  const gs = gameState;
-  if (!gs || gs.currentTurn !== myId || gs.phase !== 'draw') return;
-  if (!gs.discard.length) return;
-  await mutate(gs => {
-    const card = gs.discard.pop();
-    gs.drawnCard = card;
-    gs.drawnFrom = 'discard';
-    gs.phase = 'action';
-    gs.lastAction = `${myName} took from the discard pile.`;
-  });
+  // House rule: drawing from the discard pile is disabled. All draws come from the deck.
+  // This stub is kept so any inline onclick or stale handler can't crash; it just no-ops.
+  return;
 }
 
 async function selectHandCard(i) {
@@ -2230,6 +2782,11 @@ async function useDrawnAbility() {
 }
 
 async function beginRoundView() {
+  // Play the flip-down animation first so the cards visibly turn face-down,
+  // then commit the state change. The animation lasts ~450ms; we wait ~300ms
+  // (around the halfway point of the flip) before swapping the DOM.
+  playInitialPeekFlip('hide');
+  await new Promise(r => setTimeout(r, 320));
   await mutate(gs => {
     ensureInitialPeekState(gs);
     gs.initialPeekDone[myId] = true;
@@ -3178,6 +3735,128 @@ function escHtml(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+// ═══════════════════════════════════════════
+// PREMIUM UI HELPERS
+// ═══════════════════════════════════════════
+
+// Turn-order ribbon — small avatar strip showing player order, active player, CABO state.
+function renderTurnRibbon(gs) {
+  const el = document.getElementById('turnRibbon');
+  if (!el) return;
+  if (!gs || gs.phase === 'lobby' || !gs.players || gs.players.length === 0) {
+    el.style.display = 'none';
+    return;
+  }
+  el.style.display = '';
+  // Order players starting from current turn (so the active player is leftmost)
+  const players = gs.players;
+  const currentIdx = players.findIndex(p => p.id === gs.currentTurn);
+  const ordered = currentIdx >= 0
+    ? [...players.slice(currentIdx), ...players.slice(0, currentIdx)]
+    : players;
+  const parts = [];
+  ordered.forEach((p, i) => {
+    const isActive = p.id === gs.currentTurn && gs.phase !== 'end';
+    const isCabo = gs.cabo === p.id;
+    const isMe = p.id === myId;
+    const initials = (p.name || '?').trim().slice(0, 2).toUpperCase();
+    const cls = ['turn-ribbon-avatar'];
+    if (isActive) cls.push('active');
+    if (isMe) cls.push('me');
+    parts.push(`
+      <div class="${cls.join(' ')}" title="${escHtml(p.name)}${isCabo ? ' — called CABO' : ''}">
+        <div class="turn-ribbon-circle">${escHtml(initials)}</div>
+        <div class="turn-ribbon-name">${escHtml(p.name || '?')}</div>
+        ${isCabo ? '<span class="turn-ribbon-cabo-badge">CABO</span>' : ''}
+        <span class="turn-ribbon-conn" title="Connected"></span>
+      </div>
+    `);
+    if (i < ordered.length - 1) parts.push('<span class="turn-ribbon-arrow">›</span>');
+  });
+  el.innerHTML = parts.join('');
+}
+
+function toggleAbilityCheatSheet() {
+  const panel = document.getElementById('abilityCheatSheet');
+  if (panel) panel.classList.toggle('show');
+}
+// Close the cheat-sheet when clicking anywhere outside
+document.addEventListener('click', (e) => {
+  const panel = document.getElementById('abilityCheatSheet');
+  const btn = document.getElementById('abilityCheatSheetBtn');
+  if (!panel || !btn) return;
+  if (!panel.classList.contains('show')) return;
+  if (panel.contains(e.target) || btn.contains(e.target)) return;
+  panel.classList.remove('show');
+});
+
+// Slide-in animation: a card back flies from the deck (or discard) to the
+// drawn-card preview area inside the action bar.
+function playDrawAnimation(fromElId) {
+  const overlay = document.getElementById('drawAnimOverlay');
+  const fromEl = document.getElementById(fromElId);
+  const toEl = document.getElementById('drawnPreview');
+  if (!overlay || !fromEl || !toEl) return;
+  const fr = fromEl.getBoundingClientRect();
+  const tr = toEl.getBoundingClientRect();
+  const fx = fr.left + fr.width / 2, fy = fr.top + fr.height / 2;
+  const tx = tr.left + tr.width / 2, ty = tr.top + tr.height / 2;
+  overlay.innerHTML = '';
+  overlay.classList.add('active');
+  const card = document.createElement('div');
+  card.className = 'draw-flying';
+  card.innerHTML = cardBackSVG();
+  card.style.left = fx + 'px';
+  card.style.top  = fy + 'px';
+  card.style.opacity = '0';
+  // Initially hide the real preview so the flying card is the only one visible
+  toEl.style.opacity = '0';
+  overlay.appendChild(card);
+  const DUR = 380;
+  requestAnimationFrame(() => {
+    card.style.transition = 'opacity 80ms ease';
+    card.style.opacity = '1';
+    setTimeout(() => {
+      card.style.transition =
+        `left ${DUR}ms cubic-bezier(0.22,0.68,0.35,1), ` +
+        `top ${DUR}ms cubic-bezier(0.22,0.68,0.35,1), ` +
+        `transform ${DUR}ms cubic-bezier(0.22,0.68,0.35,1), ` +
+        `opacity 100ms ease ${DUR - 80}ms`;
+      card.style.left = tx + 'px';
+      card.style.top  = ty + 'px';
+      card.style.transform = 'translate(-50%,-50%) scale(1.05)';
+      setTimeout(() => {
+        // Reveal the real preview and fade the flyer
+        toEl.style.opacity = '';
+        card.style.opacity = '0';
+        setTimeout(() => {
+          overlay.classList.remove('active');
+          overlay.innerHTML = '';
+        }, 150);
+      }, DUR - 40);
+    }, 40);
+  });
+}
+
+// Brief 3D flip animation on slots 2/3 — used at the start of a round
+// (revealing the bottom two) and on Begin (hiding them again).
+function playInitialPeekFlip(direction) {
+  // direction: 'reveal' = face-up appears; 'hide' = flips to face-down
+  const cls = direction === 'reveal' ? 'flip-reveal' : 'flip-hide';
+  ['my_2', 'my_3'].forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    // Stagger slightly so the two cards flip in sequence (50ms apart)
+    setTimeout(() => {
+      el.classList.remove('flip-reveal', 'flip-hide');
+      // Force reflow so the animation can re-trigger
+      void el.offsetWidth;
+      el.classList.add(cls);
+      setTimeout(() => el.classList.remove(cls), 600);
+    }, i * 60);
+  });
+}
+
 async function backToLobby() {
   if (socket) { socket.close(); socket = null; }
   roomCode = '';
@@ -3548,6 +4227,22 @@ document.getElementById('roomCodeInput').addEventListener('keydown', e => {
 document.getElementById('roomCodeInput').addEventListener('input', e => {
   e.target.value = e.target.value.toUpperCase();
 });
+
+// Auto-fill the player name on page load with the last name used (if any).
+// Focuses the room-code field if a name is pre-filled so the user can jump
+// straight to joining.
+(function restorePlayerName() {
+  try {
+    const saved = localStorage.getItem('cabo:playerName');
+    if (!saved) return;
+    const input = document.getElementById('playerName');
+    if (input && !input.value) {
+      input.value = saved;
+      const codeInput = document.getElementById('roomCodeInput');
+      if (codeInput) codeInput.focus();
+    }
+  } catch (e) {}
+})();
 </script>
 </body>
 </html>
