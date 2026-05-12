@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=1200, user-scalable=yes, maximum-scale=4">
+<meta name="viewport" content="width=1024, initial-scale=1.0, minimum-scale=0.2, maximum-scale=4, user-scalable=yes">
 <title>CABO</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
 <style>
@@ -1530,6 +1530,95 @@
        paused state — on touch we pause via :active instead. */
     .btn.ability-pulse:hover { animation-play-state: running; }
     .btn.ability-pulse:active { animation-play-state: paused; }
+
+    /* ── AESTHETIC POLISH FOR TOUCH DEVICES ──
+       At the smaller scales phones render at, soft shadows wash out and the
+       whole table can feel flat. The rules below add depth (richer card
+       shadows), warmth (gold-tinted glows on key elements), and a touch of
+       motion (smoother transitions) so the small-screen view still feels
+       like a premium tabletop instead of a miniature spreadsheet. */
+
+    /* Card stacks get deeper, more layered shadows so each card reads as a
+       distinct physical object even when scaled to 30-35% of its native size. */
+    .card.face-down {
+      box-shadow:
+        1px 1px 0 -0.5px #2a3a52,
+        2px 2px 0 -0.5px #1d2d44,
+        3px 3px 0 -0.5px #15243a,
+        4px 4px 0 -0.5px #0a1628,
+        0 8px 22px rgba(0,0,0,0.7);
+    }
+    .card.face-up {
+      box-shadow:
+        1px 1px 0 -0.5px #d4c8a8,
+        2px 2px 0 -0.5px #b8a888,
+        3px 3px 0 -0.5px #9a8868,
+        4px 4px 0 -0.5px #7a6848,
+        0 8px 22px rgba(0,0,0,0.55);
+    }
+
+    /* Pile-stack ghost cards get a touch more contrast so the depth reads
+       at a glance on smaller physical screens. */
+    .pile-stack[data-depth="3"]::after,
+    .pile-stack[data-depth="3"]::before,
+    .pile-stack[data-depth="2"]::before {
+      border-color: rgba(201,168,76,0.28);
+      box-shadow: 0 3px 8px rgba(0,0,0,0.5);
+    }
+
+    /* The persistent fire button is the one CTA available at all times. Give
+       it a soft animated halo so it's findable without making it loud. */
+    #persistentFireBtn button {
+      box-shadow:
+        0 6px 16px rgba(139,26,26,0.35),
+        0 0 22px rgba(201,168,76,0.18),
+        inset 0 1px 0 rgba(255,200,120,0.18);
+      transition: box-shadow 0.2s, transform 0.15s;
+    }
+
+    /* Beefier turn beacon — easier to spot whose turn it is at small scale. */
+    .turn-beacon {
+      width: 12px;
+      height: 12px;
+    }
+
+    /* The drawn-card preview is the most important visual moment of your turn.
+       Add a soft gold rim so it doesn't disappear into the background. */
+    .drawn-card-preview .card {
+      box-shadow:
+        0 10px 28px rgba(0,0,0,0.6),
+        0 0 0 1.5px rgba(201,168,76,0.4),
+        0 0 24px rgba(232,201,110,0.25);
+    }
+
+    /* Action message gets a soft warm backdrop so it reads against the felt. */
+    .action-msg {
+      text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+    }
+
+    /* Smoother transitions on key state changes so the table feels alive
+       rather than snapping between states. */
+    .card,
+    .opponent-zone,
+    .turn-ribbon-avatar,
+    .pile-stack {
+      transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+    }
+
+    /* The peek overlay gets a soft backdrop blur on touch devices so the
+       overlay reads cleanly against a busy game board. (Backdrop-filter is
+       well-supported on modern mobile browsers.) */
+    .peek-overlay {
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      background: rgba(13,21,9,0.92);
+    }
+
+    /* Rulebook modal: a touch more weight on the title and a subtle inner
+       gradient so it feels parchment-like rather than flat. */
+    .rulebook-title {
+      text-shadow: 0 2px 18px rgba(201,168,76,0.45);
+    }
   }
 
   /* Tablet refinements (covers iPad portrait, iPad mini, small Android tablets
