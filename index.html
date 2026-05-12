@@ -261,7 +261,7 @@
     align-items: center;
     gap: 8px;
   }
-  .opponents-arc {
+  .opponents-top {
     display: flex;
     gap: 10px;
     justify-content: center;
@@ -270,6 +270,22 @@
     width: 100%;
     padding: 0 4px;
   }
+  .middle-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
+  }
+  .middle-left, .middle-right {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+  /* Hide empty flanks so center stays centered with fewer players */
+  .middle-left:empty, .middle-right:empty { display: none; }
   .center-row      { }
   .my-zone         { width: 100%; }
 
@@ -1465,7 +1481,8 @@
     .pile-stack::before,
     .pile-stack::after { width: 48px; height: 72px; }
     .game-header { padding: 4px; }
-    .opponents-arc { gap: 6px; }
+    .opponents-top { gap: 6px; }
+    .middle-row { gap: 6px; }
     .opponent-zone { padding: 4px; min-width: 0; }
   }
 
@@ -1701,22 +1718,26 @@
   <div id="turnRibbon" class="turn-ribbon" style="display:none"></div>
 
   <div class="table-area" id="tableArea">
-    <div class="opponents-arc" id="opponentsArc"></div>
+    <div class="opponents-top" id="opponentsTop"></div>
 
-    <div class="center-row">
-      <div class="pile-area">
-        <div class="pile-label">Deck</div>
-        <div class="pile-stack" id="deckStack" data-depth="3">
-          <div class="card face-down clickable" id="deckCard" onclick="drawFromDeck()"></div>
+    <div class="middle-row">
+      <div class="middle-left" id="middleLeft"></div>
+      <div class="center-row">
+        <div class="pile-area">
+          <div class="pile-label">Deck</div>
+          <div class="pile-stack" id="deckStack" data-depth="3">
+            <div class="card face-down clickable" id="deckCard" onclick="drawFromDeck()"></div>
+          </div>
+          <div id="deckCount" style="font-size:11px;color:var(--muted);margin-top:2px;font-family:'Cinzel',serif"></div>
         </div>
-        <div id="deckCount" style="font-size:11px;color:var(--muted);margin-top:2px;font-family:'Cinzel',serif"></div>
-      </div>
-      <div class="pile-area">
-        <div class="pile-label">Discard</div>
-        <div class="pile-stack" id="discardStack" data-depth="0">
-          <div class="card face-down" id="discardCard" title="Discard pile (not drawable)"></div>
+        <div class="pile-area">
+          <div class="pile-label">Discard</div>
+          <div class="pile-stack" id="discardStack" data-depth="0">
+            <div class="card face-down" id="discardCard" title="Discard pile (not drawable)"></div>
+          </div>
         </div>
       </div>
+      <div class="middle-right" id="middleRight"></div>
     </div>
 
     <div class="my-zone">
@@ -2573,8 +2594,30 @@ function renderGame(gs) {
   const cheatBtn = document.getElementById('abilityCheatSheetBtn');
   if (cheatBtn) cheatBtn.classList.toggle('show', gs.phase !== 'lobby');
 
-  // Opponents — all rendered into a single arc container (wraps on narrow screens)
+  // Opponents — distributed into top row + middle flanks based on player count
+  // Layout spec (N = total players, opps = N-1):
+  //   1 opp  → top:[0]
+  //   2 opps → top:[0,1]
+  //   3 opps → top:[0,1,2]
+  //   4 opps → top:[1,2,3], midLeft:[0]
+  //   5 opps → top:[1,2,3], midLeft:[0], midRight:[4]
   const opponents = gs.players.filter(p => p.id !== myId);
+  const oppCount = opponents.length;
+  let topRow, midLeft, midRight;
+  if (oppCount <= 3) {
+    topRow = opponents; midLeft = []; midRight = [];
+  } else if (oppCount === 4) {
+    midLeft  = [opponents[0]];
+    topRow   = opponents.slice(1, 4);
+    midRight = [];
+  } else {
+    // 5+ opponents
+    midLeft  = [opponents[0]];
+    topRow   = opponents.slice(1, 4);
+    midRight = [opponents[4]];
+    // If somehow 6+ opps (beyond spec), overflow extras into top row
+    if (oppCount > 5) topRow = topRow.concat(opponents.slice(5));
+  }
 
   const renderOppZone = (p) => {
     const hand = gs.hands[p.id] || [];
@@ -2667,7 +2710,9 @@ function renderGame(gs) {
     </div>`;
   };
 
-  document.getElementById('opponentsArc').innerHTML = opponents.map(renderOppZone).join('');
+  document.getElementById('opponentsTop').innerHTML = topRow.map(renderOppZone).join('');
+  document.getElementById('middleLeft').innerHTML   = midLeft.map(renderOppZone).join('');
+  document.getElementById('middleRight').innerHTML  = midRight.map(renderOppZone).join('');
 
   // Whether *I* may currently draw from a pile
   const canIDraw = gs.currentTurn === myId && gs.phase === 'draw';
