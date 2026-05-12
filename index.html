@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=1200, user-scalable=yes, maximum-scale=4">
 <title>CABO</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
 <style>
@@ -2146,23 +2146,36 @@ function connectToRoom(code, onOpenExtra) {
       if (msg.type === 'state') {
         const gs = msg.state;
         const prevGs = gameState;
+        _lastBroadcastReceivedAt = Date.now();
 
         // ── Defensive players-list merge ──
         // The PartyKit server appears to occasionally broadcast a state whose
-        // players list is missing one or more joiners that we'd already seen
-        // (most often: a non-host's initial state echoes back as [host, self]
-        // even though more players are actually in the room). If our previous
-        // gameState knew about players the new state doesn't mention, keep
-        // them — both in the players list and in the per-player score/hand
-        // dictionaries, so a 4-player game doesn't collapse to 2 on screen.
-        // This only runs in lobby phase; once the game is dealt, hands are
-        // authoritative and shouldn't be merged.
+        // players list is missing one or more joiners that we'd already seen.
+        // (The most common symptom: a non-host's initial broadcast echoes back
+        // as [host, self] even though more players are actually in the room.)
+        // We preserve those dropped players client-side so the on-screen
+        // roster stays correct, and we carry along their hand/score entries
+        // too so a 5-player game doesn't visually collapse to 3 mid-round.
         let mergedAnyPlayer = false;
-        if (prevGs?.players && gs?.players && gs.phase === 'lobby') {
+        if (prevGs?.players && gs?.players) {
           const incomingIds = new Set(gs.players.map(p => p.id));
           for (const p of prevGs.players) {
             if (!incomingIds.has(p.id)) {
               gs.players.push(p);
+              // Carry over their hand if we have one and the incoming state
+              // doesn't (so opponents' cards stay visible during the round).
+              if (prevGs.hands && prevGs.hands[p.id]) {
+                gs.hands = gs.hands || {};
+                if (!gs.hands[p.id]) gs.hands[p.id] = prevGs.hands[p.id];
+              }
+              if (prevGs.scores && prevGs.scores[p.id] !== undefined) {
+                gs.scores = gs.scores || {};
+                if (gs.scores[p.id] === undefined) gs.scores[p.id] = prevGs.scores[p.id];
+              }
+              if (prevGs.initialPeekDone && prevGs.initialPeekDone[p.id] !== undefined) {
+                gs.initialPeekDone = gs.initialPeekDone || {};
+                if (gs.initialPeekDone[p.id] === undefined) gs.initialPeekDone[p.id] = prevGs.initialPeekDone[p.id];
+              }
               mergedAnyPlayer = true;
             }
           }
@@ -2170,34 +2183,25 @@ function connectToRoom(code, onOpenExtra) {
 
         gameState = gs;
 
-        // If we're the host AND our merge added players the server dropped,
-        // re-broadcast the canonical state so other clients (especially other
-        // joiners whose state is stuck at [host, self]) get the full roster.
-        // Only fires in lobby and only when there's something new to push, so
-        // it can't loop.
-        if (isHost && mergedAnyPlayer && gs.phase === 'lobby') {
+        // Host: if our merge added players that the server dropped, immediately
+        // rebroadcast the canonical state so the rest of the room catches up.
+        // Works in both lobby and game phase.
+        if (isHost && mergedAnyPlayer) {
           setTimeout(() => {
-            if (gameState && gameState.phase === 'lobby') {
-              sendToServer({ type: 'setState', state: gameState });
-            }
+            if (gameState) sendToServer({ type: 'setState', state: gameState });
           }, 250);
         }
 
-        // Also: whenever the host sees the lobby player list change (typically
-        // because a new joiner just arrived), re-broadcast the canonical state.
-        // The server-side broadcast that resulted from the join may have only
-        // reached us (the host) — re-pushing through setState forces a fresh
-        // round-trip that lands on every client.
+        // Host: whenever our player count changes (typically because a new
+        // joiner arrived), rebroadcast so the full roster propagates to every
+        // client. The original server broadcast for the join may have only
+        // reached some of them.
         if (isHost
-            && gs.phase === 'lobby'
-            && prevGs?.phase === 'lobby'
-            && prevGs.players
+            && prevGs?.players
             && gs.players
             && gs.players.length !== prevGs.players.length) {
           setTimeout(() => {
-            if (gameState && gameState.phase === 'lobby') {
-              sendToServer({ type: 'setState', state: gameState });
-            }
+            if (gameState) sendToServer({ type: 'setState', state: gameState });
           }, 300);
         }
 
@@ -2321,6 +2325,33 @@ function copyRoomCode() {
 // ═══════════════════════════════════════════
 // LOBBY ACTIONS
 // ═══════════════════════════════════════════
+
+// Host-only: re-push our canonical state on a heartbeat so any client whose
+// state got corrupted by a server sync gap (some joiners receive a state with
+// only [host, self] instead of the full roster) catches up within a few
+// seconds. Runs through lobby AND game phase, but skipped briefly after a
+// non-host mutate to avoid stomping on their in-flight action.
+//
+// Heartbeat is paused for ~1.2s after ANY mutation (ours or echoed back from
+// the server) — that's enough time for any non-host's action to land server-side
+// before we re-broadcast. Without this guard, the heartbeat could silently
+// overwrite e.g. a player's drawn card mid-turn.
+let _lastBroadcastReceivedAt = 0;
+function startHostHeartbeat() {
+  if (window._hostHeartbeat) clearInterval(window._hostHeartbeat);
+  window._hostHeartbeat = setInterval(() => {
+    if (!isHost || !gameState || gameState.phase === 'end') {
+      clearInterval(window._hostHeartbeat);
+      window._hostHeartbeat = null;
+      return;
+    }
+    // Pause heartbeat briefly after recent state activity to avoid clobbering
+    // a non-host's in-flight mutate before its echo has fully propagated.
+    if (Date.now() - _lastBroadcastReceivedAt < 1200) return;
+    sendToServer({ type: 'setState', state: gameState });
+  }, 1500);
+}
+
 async function hostGame() {
   const name = document.getElementById('playerName').value.trim();
   if (!name) { showToast('Enter your name first'); return; }
@@ -2362,6 +2393,10 @@ async function hostGame() {
   connectToRoom(roomCode, () => {
     sendToServer({ type: 'setState', state: gs });
   });
+  // Start the periodic re-broadcast so any joiner whose state lags behind
+  // the host (PartyKit occasionally sends them a partial player list) is
+  // automatically refreshed within ~1.5 seconds.
+  startHostHeartbeat();
 
   renderWaiting(gs);
   showScreen('waitingScreen');
@@ -2401,6 +2436,13 @@ async function startGame() {
   state.scores = Object.fromEntries(gs.players.map(p => [p.id, 0]));
   gameState = state;
   sendToServer({ type: 'setState', state });
+  // Burst broadcast: push the game-start state again after a short delay so
+  // any joiner whose initial-state broadcast was filtered by the server picks
+  // up the full roster + hands. The heartbeat will continue beyond this.
+  setTimeout(() => { if (gameState) sendToServer({ type: 'setState', state: gameState }); }, 400);
+  setTimeout(() => { if (gameState) sendToServer({ type: 'setState', state: gameState }); }, 1000);
+  // Re-arm heartbeat in case it self-terminated; it'll keep running through gameplay.
+  startHostHeartbeat();
   showScreen('gameScreen');
   renderGame(state);
   // Deal animation only on the very first game start
@@ -4656,6 +4698,9 @@ async function playAgain() {
   window._initialFlipShownFor = null;
   window._seenFireEvents = new Set();
   window._seenSwapEvents = new Set();
+  // Re-arm the host heartbeat since the game ended (the interval terminates
+  // when phase reaches 'end'). Now that we're back in lobby, keep syncing.
+  startHostHeartbeat();
   showScreen('waitingScreen');
 }
 
