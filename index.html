@@ -155,6 +155,32 @@
     color: var(--gold-light);
   }
   .btn-info:hover { background: rgba(201,168,76,0.2); }
+
+  /* Pulsing halo on the "Use Ability" button — draws the eye so the player
+     doesn't forget to use the drawn card's power before swapping/discarding. */
+  .btn.ability-pulse {
+    position: relative;
+    border-color: rgba(232,201,110,0.7);
+    background: rgba(201,168,76,0.18);
+    color: var(--gold-light);
+    animation: abilityPulse 1.5s ease-in-out infinite;
+  }
+  .btn.ability-pulse:hover {
+    background: rgba(201,168,76,0.28);
+    animation-play-state: paused; /* hold steady while the user is about to click */
+  }
+  @keyframes abilityPulse {
+    0%, 100% {
+      box-shadow:
+        0 0 0 0 rgba(232,201,110,0.55),
+        0 0 10px 2px rgba(232,201,110,0.30);
+    }
+    50% {
+      box-shadow:
+        0 0 0 8px rgba(232,201,110,0),
+        0 0 22px 7px rgba(232,201,110,0.55);
+    }
+  }
   .divider {
     text-align: center;
     color: var(--muted);
@@ -1195,6 +1221,23 @@
   }
 
 
+  /* Fire push assignment — selected source card (mine) + target opp slot (pulses green) */
+  .card.fire-push-source {
+    border-color: #38bdf8;
+    box-shadow: 0 0 0 2px #38bdf8, 0 8px 26px rgba(56,189,248,0.45), 0 0 18px 5px rgba(56,189,248,0.35);
+    transform: translateY(-6px) scale(1.03);
+    z-index: 6;
+  }
+  .card.fire-push-target {
+    border-color: #34d399;
+    cursor: pointer !important;
+    animation: pushTargetPulse 1.4s ease-in-out infinite;
+  }
+  @keyframes pushTargetPulse {
+    0%, 100% { box-shadow: 0 0 0 2px #34d399, 0 0 12px 3px rgba(52,211,153,0.5); }
+    50%      { box-shadow: 0 0 0 3px #6ee7b7, 0 0 22px 7px rgba(52,211,153,0.75); }
+  }
+
   /* Drawn-card slide-in animation overlay */
   #drawAnimOverlay {
     display: none;
@@ -1715,6 +1758,9 @@ let fireSelection = [];
 let peekTimeout = null;
 // Temporarily revealed card (shown only while peek overlay is open)
 let tempPeekCard = null; // { ownerId, index }
+// Fire-push assignment: which of MY own cards is currently selected as the
+// source to send next. Local-only — other clients don't see my tentative pick.
+let firePushSelectedSource = null; // { ownerId: myId, index }
 
 // ═══════════════════════════════════════════
 // ROOM CODE + ID
@@ -2210,9 +2256,25 @@ function renderGame(gs) {
     // POV: indices 2,3 are the opponent's initially-known cards (near to THEM, far from viewer)
     // They appear at the TOP of the opponent zone — furthest from the viewer across the table.
     // Indices 0,1 are near the viewer (bottom of the opponent zone).
+    // Is this opponent's slot currently awaiting a card from my push assignment?
+    const isPushTargetSlot = (slotIdx) => !!(
+      gs.phase === 'fire' &&
+      gs.fire &&
+      gs.fire.pushPending &&
+      gs.fire.pushActor === myId &&
+      gs.fire.pushPending.some(pp => pp.ownerId === p.id && pp.idx === slotIdx)
+    );
+
     const renderOppCard = (c, i, nearClass = '') => {
-      // Null slot — render a ghost empty placeholder to preserve position
+      // Null slot — usually a ghost placeholder, but if it's a push-assignment
+      // target for me, turn it into a clickable pulsing green drop zone.
       if (c === null) {
+        if (isPushTargetSlot(i)) {
+          const clickAttr = firePushSelectedSource
+            ? `onclick="assignPushToOpp('${p.id}',${i})"`
+            : '';
+          return `<div class="card small face-down fire-push-target${nearClass}" id="opp_${p.id}_${i}" ${clickAttr} title="Send your selected card here">${cardBackSVG()}</div>`;
+        }
         return `<div class="card small face-down${nearClass}" id="opp_${p.id}_${i}" style="opacity:0.18;cursor:default;pointer-events:none">${cardBackSVG()}</div>`;
       }
       const isPeeking = !!(tempPeekCard && tempPeekCard.ownerId === p.id && tempPeekCard.index === i);
@@ -2320,7 +2382,10 @@ function renderGame(gs) {
   const myHandEl = document.getElementById('myHand');
   if (myHandEl) {
     // Fire: cards are selectable only when I'm the starter (pre-burn) or current responder
-    const myFireTurn = gs.phase === 'fire' && gs.fire && (
+    // Disable fire-card selection while a push-assignment is in progress for me —
+    // I'm picking source cards in that phase, not selecting new burns.
+    const myPushPhase = gs.phase === 'fire' && gs.fire && gs.fire.pushPending && gs.fire.pushActor === myId;
+    const myFireTurn = !myPushPhase && gs.phase === 'fire' && gs.fire && (
       (gs.fire.starterId === myId && !gs.fire.burnedValue) ||  // starter picking initial cards
       (gs.fire.queue?.[0] === myId)  // my turn to respond
     );
@@ -2341,8 +2406,12 @@ function renderGame(gs) {
       const fireClass = (myFireTurn && !isMyCaboFrozen) ? ' fire-selectable' : '';
       const fireSel = fireSelection.some(s => s.ownerId === myId && s.index === i) ? ' fire-selected' : '';
       const myCaboFrozenClass = isMyCaboFrozen ? ' cabo-frozen' : '';
+      // Fire push-source highlight when this card is the currently-selected source
+      const isPushSrc = !!(firePushSelectedSource && firePushSelectedSource.ownerId === myId && firePushSelectedSource.index === i);
+      const pushSrcClass = isPushSrc ? ' fire-push-source' : '';
       let click = '';
       if (isMyCaboFrozen) click = ''; // frozen — no interaction
+      else if (myPushPhase) click = `selectPushSource(${i})`;
       else if (myFireTurn) click = `toggleFireCard('${myId}',${i})`;
       else if (gs.phase === 'action') click = `selectHandCard(${i})`;
       else if (gs.phase === 'ability' && abilityTarget) {
@@ -2367,7 +2436,7 @@ function renderGame(gs) {
         : isOwnPeekedBySelf ? '<span class="peek-badge" style="background:#1e40af">👁 You</span>'
         : isOwnPeekedByOther ? `<span class="peek-badge">👁 ${escHtml(ownPeekerName)}</span>`
         : '';
-      const cardHtml = renderCardHtml(known ? c : null, known, sel + fireClass + fireSel + haloClass + fireHaloClass + myCaboFrozenClass, `my_${i}`, click);
+      const cardHtml = renderCardHtml(known ? c : null, known, sel + fireClass + fireSel + haloClass + fireHaloClass + myCaboFrozenClass + pushSrcClass, `my_${i}`, click);
       return hasBadgeOwn ? `<div style="position:relative;display:inline-block">${badge}${cardHtml}</div>` : cardHtml;
     };
     // Layout: render all slots in a fixed 2-column grid.
@@ -2495,6 +2564,42 @@ function renderActions(gs, isMyTurn, myHand) {
     const nextResponder = fire.queue?.[0];
     const amResponder = nextResponder === myId;
 
+    // ── PUSH ASSIGNMENT supersedes the normal fire UI when active ──
+    // After burning opponent cards, the actor (starter or responder) chooses
+    // which of their own cards to send to which opponent. Other players just
+    // see who's assigning and the per-opponent counts.
+    if (fire.pushPending && fire.pushPending.length > 0) {
+      const isActor = fire.pushActor === myId;
+      const actorName = gs.players.find(p => p.id === fire.pushActor)?.name || '?';
+      // Group the pending slots by opponent for a friendly summary like "Alice: 2 left · Bob: 1 left".
+      const byOpp = {};
+      for (const p of fire.pushPending) byOpp[p.ownerId] = (byOpp[p.ownerId] || 0) + 1;
+      const summary = Object.entries(byOpp)
+        .map(([oppId, count]) => `${escHtml(gs.players.find(pl => pl.id === oppId)?.name || '?')}: ${count} left`)
+        .join(' · ');
+      if (isActor) {
+        const hasSelection = !!firePushSelectedSource;
+        msg.innerHTML = `<div class="fire-banner">
+          <div class="fire-banner-title">🎯 Send cards to opponents</div>
+          <div class="fire-banner-sub">
+            ${hasSelection
+              ? `Now click a <strong>highlighted slot</strong> on the opponent you want to send your selected card to.`
+              : `Pick one of <strong>your cards</strong>, then click the opponent you want to send it to.`}
+            <br><span style="color:#fbbf24">${summary}</span>
+          </div>
+        </div>`;
+        btns.innerHTML = hasSelection
+          ? `<button class="btn btn-secondary" onclick="cancelPushSelection()">Cancel selection</button>`
+          : '';
+      } else {
+        msg.innerHTML = `<div class="fire-banner">
+          <div class="fire-banner-title">🎯 ${escHtml(actorName)} is sending cards</div>
+          <div class="fire-banner-sub">${summary}</div>
+        </div>`;
+      }
+      return;
+    }
+
     if (amStarter && !fire.burnedValue) {
       // Starter picks 2+ cards from any player (including self) to start the fire
       const selCount = fireSelection.length;
@@ -2559,7 +2664,7 @@ function renderActions(gs, isMyTurn, myHand) {
       };
       const abilityLabel = abilityLabels[ability] || 'Use Ability';
       msg.innerHTML = `${preview}<div>You drew ${cardLabel(gs.drawnCard)}. Swap with your card, use its ability, or discard.</div>`;
-      if (ability) btns.innerHTML += `<button class="btn btn-info" onclick="useDrawnAbility()">${abilityLabel}</button>`;
+      if (ability) btns.innerHTML += `<button class="btn btn-info ability-pulse" onclick="useDrawnAbility()">${abilityLabel}</button>`;
       btns.innerHTML += `<button class="btn btn-secondary" onclick="discardDrawn()">Discard Drawn</button>`;
     }
   } else if (gs.phase === 'ability') {
@@ -3224,46 +3329,30 @@ async function burnFireSelection() {
       for (const card of removedFromSelf) gs.discard.push(card);
       for (const { card } of removedFromOpp) gs.discard.push(card);
 
-      // Push starter's cards into opponent slots WITHOUT reshuffling the starter's hand.
-      // Bug being fixed: old code cleared every non-null slot of the starter and then
-      // re-filled them via addCardToHand, which compacted survivors to the front and
-      // visually shuffled the starter's whole hand. New behavior: pick the lowest-index
-      // remaining cards (one per opponent slot), null out ONLY those slots, leave the
-      // rest of the hand exactly where it was.
-      let pushSourceIndices = [];
-      if (removedFromOpp.length > 0) {
-        const candidateSlots = [];
-        for (let i = 0; i < gs.hands[myId].length; i++) {
-          if (gs.hands[myId][i] !== null) candidateSlots.push(i);
-        }
-        const take = Math.min(candidateSlots.length, removedFromOpp.length);
-        pushSourceIndices = candidateSlots.slice(0, take);
-        for (let i = 0; i < take; i++) {
-          const sourceSlot = pushSourceIndices[i];
-          const { ownerId, idx } = removedFromOpp[i];
-          gs.hands[ownerId][idx] = gs.hands[myId][sourceSlot];
-          gs.hands[myId][sourceSlot] = null;
-        }
-        // If starter doesn't have enough cards to cover all opponent slots, the
-        // remaining opp slots stay null (already nulled by the burn loop above).
+      // Set up the user-driven push assignment phase: the starter will pick
+      // which of their own cards to send to which opponent slot. We don't move
+      // any cards here — that happens one at a time via assignPushToOpp().
+      // Only enter assignment mode if there's something to push AND the starter
+      // actually has cards left to give.
+      const playerCardsAvailable = gs.hands[myId].filter(c => c).length;
+      if (removedFromOpp.length > 0 && playerCardsAvailable > 0) {
+        gs.fire.pushPending = removedFromOpp.map(o => ({ ownerId: o.ownerId, idx: o.idx }));
+        gs.fire.pushActor = myId;
       }
+      // If the starter burned only their own cards (no opp burns), or has no
+      // cards left to push, no assignment phase is needed — the opp slots
+      // simply stay null (already nulled by the burn loop above).
 
-      // Green halos on cards pushed to opponents
-      gs.pushHalos = removedFromOpp.map(o => ({ ownerId: o.ownerId, index: o.idx }));
+      gs.pushHalos = [];   // halos are added per-assignment in assignPushToOpp
       gs.fireHalos = [];
-      // Animation event for observers (they check actorId !== myId).
-      // Use the actual slots cards came from so the animation lines up with the new hand.
+      // Animation event for observers — burns only at this stage. Per-push
+      // animations are broadcast separately as the starter assigns each card.
       gs.fireAnimEvent = {
         eventId: 'fe_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
         actorId: myId,
         burned: [...fireSelection.filter(s => s.ownerId === myId).map(s => ({ ownerId: s.ownerId, index: s.index })),
                  ...removedFromOpp.map(o => ({ ownerId: o.ownerId, index: o.idx }))],
-        pushed: removedFromOpp.slice(0, pushSourceIndices.length).map((o, i) => ({
-          fromOwnerId: myId,
-          fromIndex: pushSourceIndices[i],
-          toOwnerId: o.ownerId,
-          toIndex: o.idx
-        }))
+        pushed: []
       };
 
       const totalBurned = removedFromSelf.length + removedFromOpp.length;
@@ -3274,8 +3363,10 @@ async function burnFireSelection() {
     });
 
     if (allSameValue) {
-      playFireBurnAnimation(burnedSlots, pushedMoves);
-      setTimeout(() => { if (gameState) mutate(gs => { gs.pushHalos = []; gs.fireAnimEvent = null; }); }, 2200);
+      // Burns animate to the discard pile; per-push animations run later, one
+      // per assignment, inside assignPushToOpp().
+      playFireBurnAnimation(burnedSlots, []);
+      setTimeout(() => { if (gameState) mutate(gs => { gs.fireAnimEvent = null; }); }, 2200);
     }
     fireSelection = [];
     return;
@@ -3361,40 +3452,24 @@ async function burnFireSelection() {
       for (const card of removedFromSelf) gs.discard.push(card);
       for (const { card } of removedFromOpp) gs.discard.push(card);
 
-      // Push the responder's own cards into the burned opponent slots WITHOUT
-      // reshuffling the responder's hand. Only the slots whose cards are leaving
-      // get nulled — every other card stays exactly where it was.
-      let pushSourceIndices2 = [];
-      if (removedFromOpp.length > 0) {
-        const candidateSlots = [];
-        for (let i = 0; i < gs.hands[myId].length; i++) {
-          if (gs.hands[myId][i] !== null) candidateSlots.push(i);
-        }
-        const take = Math.min(candidateSlots.length, removedFromOpp.length);
-        pushSourceIndices2 = candidateSlots.slice(0, take);
-        for (let i = 0; i < take; i++) {
-          const sourceSlot = pushSourceIndices2[i];
-          const { ownerId, idx } = removedFromOpp[i];
-          gs.hands[ownerId][idx] = gs.hands[myId][sourceSlot];
-          gs.hands[myId][sourceSlot] = null;
-        }
+      // User-driven push: set up the assignment phase instead of auto-pushing
+      // cards out of the responder's hand. Card movement happens later, one at
+      // a time, inside assignPushToOpp().
+      const playerCardsAvailable2 = gs.hands[myId].filter(c => c).length;
+      if (removedFromOpp.length > 0 && playerCardsAvailable2 > 0) {
+        gs.fire.pushPending = removedFromOpp.map(o => ({ ownerId: o.ownerId, idx: o.idx }));
+        gs.fire.pushActor = myId;
       }
 
-      gs.pushHalos = removedFromOpp.map(o => ({ ownerId: o.ownerId, index: o.idx }));
+      gs.pushHalos = [];   // populated per-assignment in assignPushToOpp
       gs.fireHalos = [];
       didValidBurn = true;
-      // Animation event for observers — must use the real source slots so the
-      // flying-card animation matches the new hand layout.
+      // Burn-only animation event (pushes get their own events later).
       gs.fireAnimEvent = {
         eventId: 'fe_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
         actorId: myId,
         burned: freshSelection.map(s => ({ ownerId: s.ownerId, index: s.index })),
-        pushed: removedFromOpp.slice(0, pushSourceIndices2.length).map((o, i) => ({
-          fromOwnerId: myId,
-          fromIndex: pushSourceIndices2[i],
-          toOwnerId: o.ownerId,
-          toIndex: o.idx
-        }))
+        pushed: []
       };
 
       const totalBurned = removedFromSelf.length + removedFromOpp.length;
@@ -3406,7 +3481,6 @@ async function burnFireSelection() {
       } else {
         // New fire chain — reset queue so EVERY other player (including the
         // original starter) gets a turn to respond to the new burned value.
-        // This fixes the bug where the original starter was skipped on chains.
         gs.fire.burnedValue = allVals[0];
         gs.fire.starterId = myId;
         gs.fire.starterCards = [...removedFromSelf, ...removedFromOpp.map(o => o.card)];
@@ -3416,12 +3490,16 @@ async function burnFireSelection() {
         gs.lastAction = `🔥 ${myName} started a new fire with ${totalBurned}x ${allVals[0]}(s)! Every other player must respond!`;
       }
 
+      // _checkFireDone has its own guard against ending the fire while
+      // pushPending is non-empty, so this call is safe whether or not pushes
+      // are pending. When push completes, assignPushToOpp will call it again.
       _checkFireDone(gs);
     });
 
     if (didValidBurn) {
-      playFireBurnAnimation(burnedSlots2, pushedMoves2);
-      setTimeout(() => { if (gameState) mutate(gs => { gs.pushHalos = []; gs.fireAnimEvent = null; }); }, 2200);
+      // Burns animate to discard; per-push animations run later, one per assignment.
+      playFireBurnAnimation(burnedSlots2, []);
+      setTimeout(() => { if (gameState) mutate(gs => { gs.fireAnimEvent = null; }); }, 2200);
     }
     fireSelection = [];
   }
@@ -3441,9 +3519,118 @@ async function passFireResponse() {
   fireSelection = [];
 }
 
+// ═══════════════════════════════════════════
+// FIRE PUSH ASSIGNMENT
+// ═══════════════════════════════════════════
+// After burning opponent cards, the player picks which of their own cards to
+// send to which opponent. One pending slot is filled per click.
+
+// Step 1: pick a source card from my hand. Toggleable (click same card to
+// deselect; click another to switch). Local state only — other clients don't
+// see my tentative pick.
+function selectPushSource(myIndex) {
+  const gs = gameState;
+  if (!gs || !gs.fire || !gs.fire.pushPending || gs.fire.pushActor !== myId) return;
+  const card = gs.hands[myId]?.[myIndex];
+  if (!card) return; // empty slot can't be a source
+  if (firePushSelectedSource &&
+      firePushSelectedSource.ownerId === myId &&
+      firePushSelectedSource.index === myIndex) {
+    firePushSelectedSource = null; // toggle off
+  } else {
+    firePushSelectedSource = { ownerId: myId, index: myIndex };
+  }
+  if (gameState) renderGame(gameState);
+}
+
+// Cancel the source selection without assigning. Used by the Cancel button.
+function cancelPushSelection() {
+  firePushSelectedSource = null;
+  if (gameState) renderGame(gameState);
+}
+
+// Step 2: assign the selected source card to a specific pending slot of an
+// opponent. Player triggers by clicking one of the highlighted pulsing slots
+// on the opponent's zone.
+async function assignPushToOpp(oppId, oppIndex) {
+  const gs = gameState;
+  if (!gs || !gs.fire || !gs.fire.pushPending || gs.fire.pushActor !== myId) return;
+  if (!firePushSelectedSource || firePushSelectedSource.ownerId !== myId) {
+    showToast('Pick one of your cards first');
+    return;
+  }
+  const pendingIdx = gs.fire.pushPending.findIndex(p => p.ownerId === oppId && p.idx === oppIndex);
+  if (pendingIdx === -1) return; // not actually a pending slot
+  const sourceIndex = firePushSelectedSource.index;
+  const sourceCard = gs.hands[myId]?.[sourceIndex];
+  if (!sourceCard) { firePushSelectedSource = null; return; }
+
+  // Animate the source card flying from my hand into the opp slot. Uses the
+  // existing fire-push animation overlay (empty burns array, one push move).
+  playFireBurnAnimation([], [{
+    fromId: `my_${sourceIndex}`,
+    toId: `opp_${oppId}_${oppIndex}`,
+  }]);
+
+  const capturedSourceIndex = sourceIndex; // capture for the closure below
+  firePushSelectedSource = null;
+
+  await mutate(gs => {
+    if (!gs.fire || !gs.fire.pushPending) return;
+    if (gs.fire.pushActor !== myId) return;
+    if (!gs.hands[oppId] || !gs.hands[myId]) return;
+    // Move the card. Source slot becomes null; opp slot receives the card.
+    gs.hands[oppId][oppIndex] = gs.hands[myId][capturedSourceIndex];
+    gs.hands[myId][capturedSourceIndex] = null;
+    // Remove this slot from the pending queue.
+    gs.fire.pushPending = gs.fire.pushPending.filter(p => !(p.ownerId === oppId && p.idx === oppIndex));
+    // Push halo on the just-received slot (cumulative — earlier halos still glow).
+    gs.pushHalos = [...(gs.pushHalos || []), { ownerId: oppId, index: oppIndex }];
+    // Animation event for observers.
+    gs.fireAnimEvent = {
+      eventId: 'fe_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+      actorId: myId,
+      burned: [],
+      pushed: [{
+        fromOwnerId: myId,
+        fromIndex: capturedSourceIndex,
+        toOwnerId: oppId,
+        toIndex: oppIndex,
+      }],
+    };
+    const oppName = gs.players.find(pl => pl.id === oppId)?.name || '?';
+    gs.lastAction = `🎯 ${myName} sent a card to ${oppName}.`;
+
+    // If pending is drained, OR the actor is out of cards to give, finalize:
+    // clear push state and re-check whether the fire is now done (which will
+    // end it via _endFireAndRestore if the responder queue is empty).
+    const cardsLeft = gs.hands[myId].filter(c => c).length;
+    if (gs.fire.pushPending.length === 0 || cardsLeft === 0) {
+      gs.fire.pushPending = null;
+      gs.fire.pushActor = null;
+      _checkFireDone(gs);
+    }
+  });
+
+  // Clear the halo on this specific slot a few seconds later — keeps the
+  // visual feedback brief without lingering across the rest of the fire.
+  setTimeout(() => {
+    if (!gameState) return;
+    mutate(gs => {
+      if (!gs.pushHalos) return;
+      gs.pushHalos = gs.pushHalos.filter(h => !(h.ownerId === oppId && h.index === oppIndex));
+      // Also clear the animation event for this push so observers don't replay.
+      gs.fireAnimEvent = null;
+    });
+  }, 2200);
+}
+
 // Called inside mutate — checks if all have responded and closes fire
 function _checkFireDone(gs) {
   if (!gs.fire) return;
+  // Don't end the fire while the current actor is still assigning push cards.
+  // assignPushToOpp() will call _checkFireDone again once pushPending drains.
+  if (gs.fire.pushPending && gs.fire.pushPending.length > 0) return;
   if (gs.fire.queue.length === 0) {
     gs.fire.done = true;
     gs.lastAction = (gs.lastAction || '') + ' Fire extinguished.';
@@ -3458,6 +3645,9 @@ function _endFireAndRestore(gs) {
   const snap = gs.preFireSnapshot;
   gs.fire = null;
   gs.preFireSnapshot = null;
+  // Defensive: clear local push-selection state so a stale source from a
+  // previous fire can't carry into the next phase.
+  firePushSelectedSource = null;
   // Halos/animations from the just-finished fire are still useful for a moment;
   // they'll be cleared by the actor's follow-up mutate after the animation completes.
   if (snap) {
@@ -3496,6 +3686,7 @@ function advanceTurn(gs) {
   gs.pushHalos = [];
   gs.peekIndicator = null; // clear peek indicator
   tempPeekCard = null; // clear any lingering peek
+  firePushSelectedSource = null; // defensive: no source survives a turn boundary
 
   const idx = gs.players.findIndex(p => p.id === gs.currentTurn);
   const nextIdx = (idx + 1) % gs.players.length;
