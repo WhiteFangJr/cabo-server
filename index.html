@@ -1238,6 +1238,172 @@
     50%      { box-shadow: 0 0 0 3px #6ee7b7, 0 0 22px 7px rgba(52,211,153,0.75); }
   }
 
+  /* Rulebook modal */
+  .rulebook-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 700;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(4px);
+    overflow-y: auto;
+    padding: 32px 12px;
+    align-items: flex-start;
+    justify-content: center;
+  }
+  .rulebook-overlay.show { display: flex; }
+  .rulebook-modal {
+    position: relative;
+    max-width: 720px;
+    width: 100%;
+    margin: 0 auto;
+    background:
+      linear-gradient(180deg, rgba(60,40,15,0.20), rgba(40,25,10,0.35)),
+      url("data:image/svg+xml;utf8,%3Csvg viewBox='0 0 140 140' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='rp'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0.46 0 0 0 0 0.34 0 0 0 0 0.16 0 0 0 0.18 0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23rp)'/%3E%3C/svg%3E"),
+      linear-gradient(180deg, #1a0f04, #0e0702);
+    color: var(--cream);
+    border: 1px solid rgba(201,168,76,0.4);
+    border-radius: 6px;
+    box-shadow:
+      0 12px 50px rgba(0,0,0,0.7),
+      inset 0 0 60px rgba(60,30,0,0.45),
+      inset 0 1px 0 rgba(201,168,76,0.18);
+    padding: 32px 36px 24px;
+    font-family: 'IM Fell English', serif;
+    line-height: 1.55;
+  }
+  .rulebook-close {
+    position: absolute;
+    top: 12px; right: 14px;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(201,168,76,0.4);
+    color: var(--gold-light);
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.15s, background 0.15s;
+  }
+  .rulebook-close:hover { transform: scale(1.1); background: rgba(0,0,0,0.65); }
+  .rulebook-title {
+    font-family: 'Cinzel Decorative', serif;
+    color: var(--gold);
+    text-align: center;
+    font-size: 28px;
+    letter-spacing: 0.12em;
+    margin-bottom: 4px;
+    text-shadow: 0 2px 14px rgba(201,168,76,0.3);
+  }
+  .rulebook-subtitle {
+    text-align: center;
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    letter-spacing: 0.25em;
+    color: var(--gold-dark);
+    text-transform: uppercase;
+    margin-bottom: 24px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid rgba(201,168,76,0.18);
+  }
+  .rulebook-section {
+    margin-bottom: 26px;
+    padding-bottom: 22px;
+    border-bottom: 1px dashed rgba(201,168,76,0.14);
+  }
+  .rulebook-section:last-of-type { border-bottom: none; padding-bottom: 0; }
+  .rulebook-section h3 {
+    font-family: 'Cinzel', serif;
+    font-size: 16px;
+    color: var(--gold-light);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .rulebook-section h4 {
+    font-family: 'Cinzel', serif;
+    font-size: 12px;
+    color: var(--gold);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin: 14px 0 6px;
+  }
+  .rulebook-section p { margin-bottom: 10px; font-size: 14px; }
+  .rulebook-section ul,
+  .rulebook-section ol { padding-left: 22px; margin-bottom: 10px; font-size: 14px; }
+  .rulebook-section li { margin-bottom: 6px; }
+  .rulebook-section li ul,
+  .rulebook-section li ol { margin-top: 6px; }
+  .rulebook-section-intro { font-style: italic; color: rgba(240,232,208,0.75); }
+  .rulebook-callout {
+    background: rgba(139,26,26,0.18);
+    border-left: 3px solid var(--crimson);
+    padding: 10px 14px;
+    border-radius: 3px;
+    font-size: 13px;
+    margin-top: 12px;
+  }
+  .rulebook-cards {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+    margin-top: 12px;
+  }
+  .rulebook-card-row {
+    display: grid;
+    grid-template-columns: 84px 1fr;
+    gap: 18px;
+    align-items: center;
+    padding: 10px 12px;
+    background: rgba(13,21,9,0.45);
+    border: 1px solid rgba(201,168,76,0.12);
+    border-radius: 4px;
+  }
+  .rulebook-card-visual {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 84px;
+    height: 108px;
+  }
+  /* Cards inside the rulebook are display-only — no hover lift / cursor */
+  .rulebook-card-visual .card { cursor: default !important; transform: none !important; }
+  .rulebook-card-visual .card:hover { transform: none !important; }
+  .rulebook-card-text { font-size: 13px; line-height: 1.5; }
+  .rulebook-card-text .rulebook-card-name {
+    font-family: 'Cinzel', serif;
+    font-size: 14px;
+    color: var(--gold-light);
+    letter-spacing: 0.1em;
+    margin-bottom: 4px;
+  }
+  .rulebook-card-text .rulebook-card-points {
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    color: var(--gold);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .rulebook-card-text .rulebook-card-power { color: var(--cream); }
+  .rulebook-footer {
+    text-align: center;
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(201,168,76,0.18);
+  }
+  @media (max-width: 600px) {
+    .rulebook-modal { padding: 24px 18px 16px; }
+    .rulebook-title { font-size: 22px; }
+    .rulebook-section h3 { font-size: 14px; }
+    .rulebook-card-row { grid-template-columns: 68px 1fr; gap: 12px; padding: 8px 10px; }
+    .rulebook-card-visual { width: 68px; height: 92px; }
+    .rulebook-card-visual .card { width: 68px; height: 92px; border-radius: 6px; }
+    .rulebook-card-text { font-size: 12px; }
+  }
+
   /* Drawn-card slide-in animation overlay */
   #drawAnimOverlay {
     display: none;
@@ -1307,6 +1473,91 @@
     .pile-stack::after { width: 48px; height: 72px; }
     .game-header { padding: 4px; }
     .side-left, .side-right { display: none !important; }
+  }
+
+  /* ═══════════════════════════════════════════
+     TABLET + TOUCH-DEVICE SUPPORT
+     ═══════════════════════════════════════════ */
+
+  /* Touch devices: cancel the "lift on hover" effect that otherwise sticks
+     after a tap and looks like a bug (iOS Safari is the worst offender). Also
+     suppress the default tap-flash and give a proper :active press response so
+     the player sees physical feedback when their finger lands. */
+  @media (hover: none) {
+    .card.clickable:hover,
+    .card.clickable.face-down:hover,
+    .card.clickable.face-up:hover,
+    .card:hover {
+      transform: none;
+      z-index: auto;
+    }
+    /* Reset face-down hover shadow back to the resting layered shadow */
+    .card.clickable.face-down:hover {
+      box-shadow:
+        1px 1px 0 -0.5px #2a3a52,
+        2px 2px 0 -0.5px #1d2d44,
+        3px 3px 0 -0.5px #15243a,
+        0 5px 14px rgba(0,0,0,0.55);
+    }
+    .card.clickable.face-up:hover {
+      box-shadow:
+        1px 1px 0 -0.5px #d4c8a8,
+        2px 2px 0 -0.5px #b8a888,
+        3px 3px 0 -0.5px #9a8868,
+        0 5px 14px rgba(0,0,0,0.4);
+    }
+    /* Press feedback — brief lift while the finger is down. */
+    .card.clickable:active {
+      transform: translateY(-4px) scale(1.03);
+      transition: transform 80ms ease;
+      z-index: 5;
+    }
+    .btn:active {
+      transform: translateY(1px);
+      transition: transform 80ms ease;
+    }
+    /* Suppress the default iOS gray flash on cards, buttons, and any other
+       interactive element — our :active styles provide the feedback instead. */
+    .card,
+    .btn,
+    #persistentFireBtn button,
+    #abilityCheatSheetBtn,
+    .pile-area,
+    .rulebook-close {
+      -webkit-tap-highlight-color: transparent;
+    }
+    /* Make sure ability-pulse hover-pause doesn't strand the button in the
+       paused state — on touch we pause via :active instead. */
+    .btn.ability-pulse:hover { animation-play-state: running; }
+    .btn.ability-pulse:active { animation-play-state: paused; }
+  }
+
+  /* Tablet refinements (covers iPad portrait, iPad mini, small Android tablets
+     in landscape, etc.) — the desktop card sizes are right at this width but
+     touch targets and breathing room need a small bump. */
+  @media (min-width: 721px) and (max-width: 1100px) {
+    #gameScreen { padding: 14px; }
+    /* Bigger comfortable tap targets on the action bar without making them
+       look out-of-place in landscape. */
+    .action-btns .btn { min-height: 44px; padding: 12px 22px; font-size: 13px; }
+    #persistentFireBtn button { min-height: 44px; padding: 10px 22px; font-size: 13px; }
+    #abilityCheatSheetBtn { width: 46px; height: 46px; font-size: 22px; }
+    /* A little more breathing room between hand cards and between piles. */
+    .center-row { gap: 40px; }
+    .opponent-hand { gap: 8px; }
+    /* Slightly larger turn-ribbon avatars for arm's-length readability. */
+    .turn-ribbon-circle { width: 30px; height: 30px; font-size: 12px; }
+    .turn-ribbon-name { font-size: 10px; max-width: 70px; }
+    /* Discard / deck tooltip area larger so the count is easier to read. */
+    #deckCount, .pile-label { font-size: 12px; }
+    /* Rulebook modal: comfortable width on tablets */
+    .rulebook-modal { max-width: 640px; }
+  }
+
+  /* iPad-portrait specific (768-840px) — keep all the above plus a smidge
+     more vertical padding so the table doesn't feel top-heavy. */
+  @media (min-width: 760px) and (max-width: 850px) and (orientation: portrait) {
+    .table-area { padding-top: 6px; padding-bottom: 6px; }
   }
 </style>
 </head>
@@ -1429,6 +1680,7 @@
     <ul class="player-list" id="waitingPlayerList"></ul>
     <button class="btn btn-primary" id="startBtn" onclick="startGame()" disabled>Begin the Game</button>
     <p style="text-align:center;font-size:12px;color:var(--muted);margin-top:12px;font-family:'Cinzel',serif" id="waitNote">Awaiting more players...</p>
+    <button class="btn btn-info" onclick="openRulebook()" style="margin-top:14px;font-size:12px;padding:8px;letter-spacing:0.15em">📜 Rulebook</button>
   </div>
 </div>
 
@@ -1546,6 +1798,93 @@
   <div class="cheat-row"><span class="cheat-key">Call</span><span class="cheat-desc">End your turn with a CABO call. One more turn for everyone else, then scores reveal. +5 penalty if you aren't lowest.</span></div>
   <div class="cheat-section-title">Fire</div>
   <div class="cheat-row"><span class="cheat-key">🔥</span><span class="cheat-desc">Pick 2+ cards (any owner) sharing one value. Everyone responds. Matching value burns clean; mismatch = 2 penalty cards.</span></div>
+</div>
+
+<!-- RULEBOOK MODAL — opened from the waiting room "📜 Rulebook" button -->
+<div id="rulebookOverlay" class="rulebook-overlay" onclick="closeRulebookOnBackdrop(event)">
+  <div class="rulebook-modal" role="dialog" aria-labelledby="rulebookTitle">
+    <button class="rulebook-close" onclick="closeRulebook()" aria-label="Close rulebook">&#x2715;</button>
+    <h2 id="rulebookTitle" class="rulebook-title">⚔ CABO — Rulebook</h2>
+    <p class="rulebook-subtitle">Game of Thrones Edition · House Rules</p>
+
+    <section class="rulebook-section">
+      <h3>🎯 Objective</h3>
+      <p>Score the <strong>lowest</strong> hand total when the round ends. Each player starts with 4 face-down cards. Your job is to remember what you have and what you've seen, then trade or burn cards to lower your total — or call <strong>CABO</strong> when you think your hand is the lowest at the table.</p>
+    </section>
+
+    <section class="rulebook-section">
+      <h3>🃏 Setup</h3>
+      <ul>
+        <li>Each player is dealt <strong>4 cards face-down</strong>.</li>
+        <li>You may briefly peek at your <strong>bottom two cards</strong> before the round begins. Memorize them.</li>
+        <li>Press <strong>Begin</strong> to flip them face-down. From here on, memory is your only ally — there's no persistent reveal.</li>
+      </ul>
+    </section>
+
+    <section class="rulebook-section">
+      <h3>🎴 Your Turn</h3>
+      <ol>
+        <li><strong>Draw</strong> a card from the deck (drawing from the discard pile is disabled).</li>
+        <li>Choose one of the following:
+          <ul>
+            <li><strong>Swap</strong> it with any of your hand cards — the old card goes to discard.</li>
+            <li><strong>Use its ability</strong> — only for cards 7, 8, 9, 10, J, Q, K. After the ability resolves, the drawn card is discarded.</li>
+            <li><strong>Discard it</strong> with no further action.</li>
+          </ul>
+        </li>
+        <li>Optionally <strong>call CABO</strong> — this commits your hand for the round.</li>
+        <li>Press <strong>End Turn</strong> to pass play.</li>
+      </ol>
+    </section>
+
+    <section class="rulebook-section">
+      <h3>🃏 Cards &amp; Powers</h3>
+      <p class="rulebook-section-intro">Each card is worth its face value unless noted. Powers are only available when you <em>draw</em> the card, not when it's already in your hand.</p>
+      <div id="rulebookCards" class="rulebook-cards"></div>
+    </section>
+
+    <section class="rulebook-section">
+      <h3>🔥 Fire</h3>
+      <p>Any player, at any time during the round, may press the <strong>🔥 Start Fire</strong> button to interrupt the game and burn cards.</p>
+      <h4>Starting a fire</h4>
+      <ul>
+        <li>Select <strong>2 or more cards</strong> sharing the same value — from any player, including yourself.</li>
+        <li>All selected cards are sent to the discard pile (burned).</li>
+        <li>If you burned cards from opponents, you must replace them: send one card from your hand to each opponent slot you burned. You choose <strong>which of your cards</strong> goes to <strong>which opponent</strong>.</li>
+        <li>If the selected cards don't share the same value, the burn fails — your cards stay and you draw <strong>2 penalty cards</strong>.</li>
+      </ul>
+      <h4>Responding to a fire</h4>
+      <p>When someone starts a fire, every other player gets a chance to respond in turn:</p>
+      <ul>
+        <li><strong>Clean burn</strong> — burn 1+ cards matching the fire's value. No penalty, cards lost cleanly.</li>
+        <li><strong>New chain</strong> — burn 2+ cards of any same value (different from the current fire). This resets the response queue, and every other player gets to respond again to the new value.</li>
+        <li><strong>Pass</strong> — do nothing this round.</li>
+        <li><strong>Invalid burn</strong> (single non-matching card, or mismatched values) — cards stay, you draw <strong>2 penalty cards</strong>.</li>
+      </ul>
+      <p class="rulebook-callout">⚠ The CABO caller's cards are <strong>frozen</strong> — they cannot be burned, peeked, or swapped after CABO has been called.</p>
+    </section>
+
+    <section class="rulebook-section">
+      <h3>⚔ Calling CABO</h3>
+      <p>CABO is the "I'm ready to score" call. Use the <strong>Call CABO</strong> button at the end of your turn.</p>
+      <ul>
+        <li>Every other player gets <strong>one more turn</strong> after the call.</li>
+        <li>Then all hands are revealed and scored.</li>
+        <li>Your own cards are frozen the moment you call — no one can swap, peek, or burn them until scoring.</li>
+        <li><strong>+5 penalty:</strong> If you call CABO but you don't <em>strictly</em> have the lowest hand, your score gets an extra +5 penalty.</li>
+        <li><strong>Tie-break:</strong> If you tie with another player for the lowest score, the <em>non-caller</em> wins — calling CABO is a risk.</li>
+      </ul>
+    </section>
+
+    <section class="rulebook-section">
+      <h3>🏆 Winning</h3>
+      <p>The player with the <strong>lowest final score</strong> at round end wins. Jokers (−1) and the right strategic plays can bring your score below zero. Choose risk wisely.</p>
+    </section>
+
+    <div class="rulebook-footer">
+      <button class="btn btn-primary" onclick="closeRulebook()" style="padding:10px 24px;letter-spacing:0.18em">Close Rulebook</button>
+    </div>
+  </div>
 </div>
 
 <!-- WINNER ANIMATION OVERLAY -->
@@ -1820,6 +2159,7 @@ function connectToRoom(code, onOpenExtra) {
             window._winnerShown = false;
             window._initialFlipShownFor = null;
             window._seenFireEvents = new Set();
+            window._seenSwapEvents = new Set();
           }
           renderWaiting(gs);
           // If we were on the game screen (or any other screen), step back to
@@ -1829,17 +2169,24 @@ function connectToRoom(code, onOpenExtra) {
           }
         } else {
           if (document.getElementById('waitingScreen').classList.contains('active')) showScreen('gameScreen');
-          // ── Fire animation for observers: render FIRST (so card slots exist in DOM),
-          // then play animation using the fireAnimEvent attached to incoming state.
-          // Each event carries a unique eventId; we track which we've already played
-          // so unrelated mutates that happen to still carry the same fireAnimEvent
-          // don't trigger a replay on observers (this was a real bug).
+          // Fire and swap animations for observers: render FIRST (so slots
+          // exist in DOM), then play animation using whichever event is
+          // attached to the incoming state. Each event has a unique eventId
+          // and we track which we've already played so unrelated re-broadcasts
+          // can't retrigger them.
           const fireEvt = gs.fireAnimEvent;
+          const swapEvt = gs.swapAnimEvent;
           window._seenFireEvents = window._seenFireEvents || new Set();
-          const alreadyPlayed = fireEvt?.eventId && window._seenFireEvents.has(fireEvt.eventId);
-          if (fireEvt && fireEvt.actorId !== myId && !alreadyPlayed) {
-            if (fireEvt.eventId) window._seenFireEvents.add(fireEvt.eventId);
-            renderGame(gs);
+          window._seenSwapEvents = window._seenSwapEvents || new Set();
+          const playFireNow = fireEvt && fireEvt.actorId !== myId && fireEvt.eventId
+                           && !window._seenFireEvents.has(fireEvt.eventId);
+          const playSwapNow = swapEvt && swapEvt.actorId !== myId && swapEvt.eventId
+                           && !window._seenSwapEvents.has(swapEvt.eventId);
+
+          renderGame(gs);
+
+          if (playFireNow) {
+            window._seenFireEvents.add(fireEvt.eventId);
             const burnedSlots = (fireEvt.burned || []).map(b => ({
               elId: b.ownerId === myId ? `my_${b.index}` : `opp_${b.ownerId}_${b.index}`,
               isSmall: b.ownerId !== myId
@@ -1850,8 +2197,11 @@ function connectToRoom(code, onOpenExtra) {
             }));
             requestAnimationFrame(() => playFireBurnAnimation(burnedSlots, pushedMoves));
             gameState.fireAnimEvent = null;
-          } else {
-            renderGame(gs);
+          }
+          if (playSwapNow) {
+            window._seenSwapEvents.add(swapEvt.eventId);
+            requestAnimationFrame(() => playObserverSwapAnimation(swapEvt));
+            gameState.swapAnimEvent = null;
           }
         }
       } else if (msg.type === 'join_queued') {
@@ -2797,8 +3147,19 @@ async function selectHandCard(i) {
       gs.phase = 'done';
       gs.swapHalos = [{ ownerId: myId, index: i }];
       gs.lastAction = `${myName} swapped a card.`;
+      // Broadcast a swap animation event so OBSERVERS see the card movement
+      // (face-down cards flying deck→slot and slot→discard on their screens).
+      gs.swapAnimEvent = {
+        eventId: 'sw_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+        actorId: myId,
+        type: 'deck_swap',
+        slot: { ownerId: myId, index: i },
+      };
     });
     selectedHandIndex = -1;
+    // Clear the broadcast event after the animation window so a stale state
+    // re-broadcast (e.g. to a late-joining client) doesn't keep retriggering it.
+    setTimeout(() => { if (gameState) mutate(gs => { gs.swapAnimEvent = null; }); }, 2200);
   }
 }
 
@@ -2938,7 +3299,17 @@ async function abilitySwapCommit(myIndex) {
     gs.lastAction = isSwapPeek
       ? `${myName} swapped with ${oppName} and peeked the received card.`
       : `${myName} blindly swapped a card with ${oppName}.`;
+    // Broadcast a swap animation event so observers see the two face-down
+    // cards crossing between the two hand slots.
+    gs.swapAnimEvent = {
+      eventId: 'sw_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+      actorId: myId,
+      type: 'hand_swap',
+      slotA: { ownerId: myId, index: myIndex },
+      slotB: { ownerId: oppId, index: oppIndex },
+    };
   });
+  setTimeout(() => { if (gameState) mutate(gs => { gs.swapAnimEvent = null; }); }, 2200);
 
   if (isSwapPeek && receivedCard) {
     // Show the card the player just received
@@ -3024,7 +3395,16 @@ async function peekSwapCommit(myIndex) {
     gs.swapHalos = [{ ownerId: myId, index: myIndex }, { ownerId: oppId, index: oppIndex }];
     const oppName = gs.players.find(p => p.id === oppId)?.name || '?';
     gs.lastAction = `${myName} peeked at ${oppName}'s card and swapped it.`;
+    // Broadcast the swap animation so observers see the two cards cross.
+    gs.swapAnimEvent = {
+      eventId: 'sw_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+      actorId: myId,
+      type: 'hand_swap',
+      slotA: { ownerId: myId, index: myIndex },
+      slotB: { ownerId: oppId, index: oppIndex },
+    };
   });
+  setTimeout(() => { if (gameState) mutate(gs => { gs.swapAnimEvent = null; }); }, 2200);
   abilityTarget = null;
 }
 
@@ -3960,6 +4340,60 @@ document.addEventListener('click', (e) => {
   panel.classList.remove('show');
 });
 
+// ═══════════════════════════════════════════
+// RULEBOOK MODAL
+// ═══════════════════════════════════════════
+// One row per card group: a static card visual + name + points + power.
+const RULEBOOK_CARDS = [
+  { sample: { suit: 'spade',     value: 'A'  }, name: 'Ace',              points: '1 pt',                power: 'No power. A low-value friend.' },
+  { sample: { suit: 'heart',     value: '5'  }, name: '2 – 6',            points: 'Face value (2 – 6)',  power: 'No power.' },
+  { sample: { suit: 'club',      value: '7'  }, name: '7 / 8',            points: '7 or 8 pts',          power: '<strong>Peek Own</strong> — look at one of your own cards for 4 seconds, then it flips back face-down. Memorize it.' },
+  { sample: { suit: 'diamond',   value: '9'  }, name: '9 / 10',           points: '9 or 10 pts',         power: '<strong>Spy</strong> — peek at any one opponent\'s card for 4 seconds. They\'ll see you peeked.' },
+  { sample: { suit: 'club',      value: 'J'  }, name: 'Jack',             points: '11 pts',              power: '<strong>Blind Swap</strong> — swap one of your cards with an opponent\'s card. Neither side gets to peek.' },
+  { sample: { suit: 'heart',     value: 'Q'  }, name: 'Queen',            points: '12 pts',              power: '<strong>Swap &amp; Peek</strong> — swap with an opponent, then peek at the card you just received.' },
+  { sample: { suit: 'spade',     value: 'K'  }, name: 'King (any suit)',  points: '13 pts',              power: '<strong>Peek &amp; Swap</strong> — peek at an opponent\'s card first, then choose to swap one of yours for it, or skip.' },
+  { sample: { suit: 'joker_red', value: 'JK' }, name: 'Joker',            points: '−1 pt',               power: 'No power, but worth <strong>negative one</strong> point — the best card in the deck for your score.' },
+];
+
+function openRulebook() {
+  const overlay = document.getElementById('rulebookOverlay');
+  if (!overlay) return;
+  // Populate the card visuals lazily so renderCardHtml is in scope and we don't
+  // pay the cost up front. Re-renders each open (cheap; ~8 cards).
+  const cardsHost = document.getElementById('rulebookCards');
+  if (cardsHost) {
+    cardsHost.innerHTML = RULEBOOK_CARDS.map((row, i) => `
+      <div class="rulebook-card-row">
+        <div class="rulebook-card-visual">${renderCardHtml(row.sample, true, '', 'rb_card_' + i, '')}</div>
+        <div class="rulebook-card-text">
+          <div class="rulebook-card-name">${row.name}</div>
+          <div class="rulebook-card-points">${row.points}</div>
+          <div class="rulebook-card-power">${row.power}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+  overlay.classList.add('show');
+}
+
+function closeRulebook() {
+  const overlay = document.getElementById('rulebookOverlay');
+  if (overlay) overlay.classList.remove('show');
+}
+
+// Close when clicking on the dark backdrop (but not inside the modal itself)
+function closeRulebookOnBackdrop(e) {
+  if (e.target && e.target.id === 'rulebookOverlay') closeRulebook();
+}
+
+// Escape key closes the rulebook
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    const overlay = document.getElementById('rulebookOverlay');
+    if (overlay && overlay.classList.contains('show')) closeRulebook();
+  }
+});
+
 // Slide-in animation: a card back flies from the deck (or discard) to the
 // drawn-card preview area inside the action bar.
 function playDrawAnimation(fromElId) {
@@ -4177,6 +4611,7 @@ async function playAgain() {
   window._winnerShown = false;
   window._initialFlipShownFor = null;
   window._seenFireEvents = new Set();
+  window._seenSwapEvents = new Set();
   showScreen('waitingScreen');
 }
 
@@ -4335,6 +4770,86 @@ function showWinnerFlash(name) {
 // ═══════════════════════════════════════════
 // SWAP ANIMATION
 // ═══════════════════════════════════════════
+// Translate a {ownerId, index} into the DOM element ID for THIS viewer.
+// My own slots are `my_X`, other players' slots are `opp_<id>_X`.
+function slotToElId(slot) {
+  if (!slot || slot.ownerId == null || slot.index == null) return null;
+  return slot.ownerId === myId ? `my_${slot.index}` : `opp_${slot.ownerId}_${slot.index}`;
+}
+
+// Animate a single face-down card flying from one element's position to
+// another's, over the swap overlay. Each call appends its own DOM node and
+// removes only itself when done, so multiple flights can run in parallel
+// without stomping each other.
+function playOneWayFlight(fromId, toId, color) {
+  const overlay = document.getElementById('swapOverlay');
+  if (!overlay) return;
+  const fromEl = document.getElementById(fromId);
+  const toEl   = document.getElementById(toId);
+  if (!fromEl || !toEl) return;
+  const fr = fromEl.getBoundingClientRect();
+  const tr = toEl.getBoundingClientRect();
+  if (!fr.width || !tr.width) return;
+  const fx = fr.left + fr.width / 2, fy = fr.top + fr.height / 2;
+  const tx = tr.left + tr.width / 2, ty = tr.top + tr.height / 2;
+  overlay.classList.add('active');
+  const card = document.createElement('div');
+  card.className = 'swap-flying-card';
+  card.innerHTML = cardBackSVG();
+  const ring = color || 'rgba(201,168,76,0.8)';
+  card.style.cssText =
+    `left:${fx}px;top:${fy}px;transform:translate(-50%,-50%);opacity:0;` +
+    `box-shadow:0 8px 28px rgba(0,0,0,0.65),0 0 0 2px ${ring};`;
+  overlay.appendChild(card);
+  const DUR = 420;
+  requestAnimationFrame(() => {
+    card.style.transition = 'opacity 80ms ease';
+    card.style.opacity = '1';
+    setTimeout(() => {
+      card.style.transition =
+        `left ${DUR}ms cubic-bezier(0.4,0,0.2,1), ` +
+        `top ${DUR}ms cubic-bezier(0.4,0,0.2,1), ` +
+        `opacity 120ms ease ${DUR - 80}ms`;
+      card.style.left = tx + 'px';
+      card.style.top  = ty + 'px';
+      setTimeout(() => {
+        card.style.opacity = '0';
+        setTimeout(() => {
+          card.remove();
+          if (!overlay.querySelector('.swap-flying-card')) {
+            overlay.classList.remove('active');
+          }
+        }, 150);
+      }, DUR - 40);
+    }, 80);
+  });
+}
+
+// Play the right animation for an incoming swap event broadcast in shared
+// state (gs.swapAnimEvent). The actor's local handlers already ran their
+// own animations; this is for OBSERVERS who otherwise wouldn't see the
+// face-down cards moving.
+//   deck_swap → new card flies from deck → actor's slot,
+//               old card flies from slot → discard pile.
+//   hand_swap → two face-down cards trade positions between two hand slots
+//               (existing playSwapAnimation handles this perfectly).
+function playObserverSwapAnimation(evt) {
+  if (!evt) return;
+  if (evt.type === 'hand_swap') {
+    const elA = slotToElId(evt.slotA);
+    const elB = slotToElId(evt.slotB);
+    if (elA && elB && document.getElementById(elA) && document.getElementById(elB)) {
+      playSwapAnimation(elA, elB);
+    }
+  } else if (evt.type === 'deck_swap') {
+    const slotElId = slotToElId(evt.slot);
+    if (!slotElId || !document.getElementById(slotElId)) return;
+    // Two simultaneous one-way flights.
+    playOneWayFlight('deckCard', slotElId);
+    playOneWayFlight(slotElId, 'discardCard');
+  }
+}
+
 function playSwapAnimation(elIdA, elIdB, onDone) {
   const overlay = document.getElementById('swapOverlay');
   if (!overlay) { if (onDone) onDone(); return; }
@@ -4350,7 +4865,8 @@ function playSwapAnimation(elIdA, elIdB, onDone) {
   const cBx = rB.left + rB.width / 2;
   const cBy = rB.top  + rB.height / 2;
 
-  overlay.innerHTML = '';
+  // Don't wipe overlay.innerHTML — other concurrent flights (e.g. deck_swap
+  // observer pair) may also be using it. Each flyer cleans itself up below.
   overlay.classList.add('active');
 
   function makeFlyer(cx, cy, color) {
@@ -4383,8 +4899,9 @@ function playSwapAnimation(elIdA, elIdB, onDone) {
         flyA.style.opacity = '0';
         flyB.style.opacity = '0';
         setTimeout(() => {
-          overlay.classList.remove('active');
-          overlay.innerHTML = '';
+          flyA.remove();
+          flyB.remove();
+          if (!overlay.querySelector('.swap-flying-card')) overlay.classList.remove('active');
           if (onDone) onDone();
         }, 120);
       }, DUR);
