@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=1024, initial-scale=1.0, minimum-scale=0.2, maximum-scale=4, user-scalable=yes">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CABO</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
 <style>
@@ -1530,95 +1530,6 @@
        paused state — on touch we pause via :active instead. */
     .btn.ability-pulse:hover { animation-play-state: running; }
     .btn.ability-pulse:active { animation-play-state: paused; }
-
-    /* ── AESTHETIC POLISH FOR TOUCH DEVICES ──
-       At the smaller scales phones render at, soft shadows wash out and the
-       whole table can feel flat. The rules below add depth (richer card
-       shadows), warmth (gold-tinted glows on key elements), and a touch of
-       motion (smoother transitions) so the small-screen view still feels
-       like a premium tabletop instead of a miniature spreadsheet. */
-
-    /* Card stacks get deeper, more layered shadows so each card reads as a
-       distinct physical object even when scaled to 30-35% of its native size. */
-    .card.face-down {
-      box-shadow:
-        1px 1px 0 -0.5px #2a3a52,
-        2px 2px 0 -0.5px #1d2d44,
-        3px 3px 0 -0.5px #15243a,
-        4px 4px 0 -0.5px #0a1628,
-        0 8px 22px rgba(0,0,0,0.7);
-    }
-    .card.face-up {
-      box-shadow:
-        1px 1px 0 -0.5px #d4c8a8,
-        2px 2px 0 -0.5px #b8a888,
-        3px 3px 0 -0.5px #9a8868,
-        4px 4px 0 -0.5px #7a6848,
-        0 8px 22px rgba(0,0,0,0.55);
-    }
-
-    /* Pile-stack ghost cards get a touch more contrast so the depth reads
-       at a glance on smaller physical screens. */
-    .pile-stack[data-depth="3"]::after,
-    .pile-stack[data-depth="3"]::before,
-    .pile-stack[data-depth="2"]::before {
-      border-color: rgba(201,168,76,0.28);
-      box-shadow: 0 3px 8px rgba(0,0,0,0.5);
-    }
-
-    /* The persistent fire button is the one CTA available at all times. Give
-       it a soft animated halo so it's findable without making it loud. */
-    #persistentFireBtn button {
-      box-shadow:
-        0 6px 16px rgba(139,26,26,0.35),
-        0 0 22px rgba(201,168,76,0.18),
-        inset 0 1px 0 rgba(255,200,120,0.18);
-      transition: box-shadow 0.2s, transform 0.15s;
-    }
-
-    /* Beefier turn beacon — easier to spot whose turn it is at small scale. */
-    .turn-beacon {
-      width: 12px;
-      height: 12px;
-    }
-
-    /* The drawn-card preview is the most important visual moment of your turn.
-       Add a soft gold rim so it doesn't disappear into the background. */
-    .drawn-card-preview .card {
-      box-shadow:
-        0 10px 28px rgba(0,0,0,0.6),
-        0 0 0 1.5px rgba(201,168,76,0.4),
-        0 0 24px rgba(232,201,110,0.25);
-    }
-
-    /* Action message gets a soft warm backdrop so it reads against the felt. */
-    .action-msg {
-      text-shadow: 0 1px 2px rgba(0,0,0,0.6);
-    }
-
-    /* Smoother transitions on key state changes so the table feels alive
-       rather than snapping between states. */
-    .card,
-    .opponent-zone,
-    .turn-ribbon-avatar,
-    .pile-stack {
-      transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
-    }
-
-    /* The peek overlay gets a soft backdrop blur on touch devices so the
-       overlay reads cleanly against a busy game board. (Backdrop-filter is
-       well-supported on modern mobile browsers.) */
-    .peek-overlay {
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
-      background: rgba(13,21,9,0.92);
-    }
-
-    /* Rulebook modal: a touch more weight on the title and a subtle inner
-       gradient so it feels parchment-like rather than flat. */
-    .rulebook-title {
-      text-shadow: 0 2px 18px rgba(201,168,76,0.45);
-    }
   }
 
   /* Tablet refinements (covers iPad portrait, iPad mini, small Android tablets
@@ -2235,65 +2146,7 @@ function connectToRoom(code, onOpenExtra) {
       if (msg.type === 'state') {
         const gs = msg.state;
         const prevGs = gameState;
-        _lastBroadcastReceivedAt = Date.now();
-
-        // ── Defensive players-list merge ──
-        // The PartyKit server appears to occasionally broadcast a state whose
-        // players list is missing one or more joiners that we'd already seen.
-        // (The most common symptom: a non-host's initial broadcast echoes back
-        // as [host, self] even though more players are actually in the room.)
-        // We preserve those dropped players client-side so the on-screen
-        // roster stays correct, and we carry along their hand/score entries
-        // too so a 5-player game doesn't visually collapse to 3 mid-round.
-        let mergedAnyPlayer = false;
-        if (prevGs?.players && gs?.players) {
-          const incomingIds = new Set(gs.players.map(p => p.id));
-          for (const p of prevGs.players) {
-            if (!incomingIds.has(p.id)) {
-              gs.players.push(p);
-              // Carry over their hand if we have one and the incoming state
-              // doesn't (so opponents' cards stay visible during the round).
-              if (prevGs.hands && prevGs.hands[p.id]) {
-                gs.hands = gs.hands || {};
-                if (!gs.hands[p.id]) gs.hands[p.id] = prevGs.hands[p.id];
-              }
-              if (prevGs.scores && prevGs.scores[p.id] !== undefined) {
-                gs.scores = gs.scores || {};
-                if (gs.scores[p.id] === undefined) gs.scores[p.id] = prevGs.scores[p.id];
-              }
-              if (prevGs.initialPeekDone && prevGs.initialPeekDone[p.id] !== undefined) {
-                gs.initialPeekDone = gs.initialPeekDone || {};
-                if (gs.initialPeekDone[p.id] === undefined) gs.initialPeekDone[p.id] = prevGs.initialPeekDone[p.id];
-              }
-              mergedAnyPlayer = true;
-            }
-          }
-        }
-
         gameState = gs;
-
-        // Host: if our merge added players that the server dropped, immediately
-        // rebroadcast the canonical state so the rest of the room catches up.
-        // Works in both lobby and game phase.
-        if (isHost && mergedAnyPlayer) {
-          setTimeout(() => {
-            if (gameState) sendToServer({ type: 'setState', state: gameState });
-          }, 250);
-        }
-
-        // Host: whenever our player count changes (typically because a new
-        // joiner arrived), rebroadcast so the full roster propagates to every
-        // client. The original server broadcast for the join may have only
-        // reached some of them.
-        if (isHost
-            && prevGs?.players
-            && gs.players
-            && gs.players.length !== prevGs.players.length) {
-          setTimeout(() => {
-            if (gameState) sendToServer({ type: 'setState', state: gameState });
-          }, 300);
-        }
-
         if (gs.phase === 'lobby') {
           // Coming back from a finished game (host hit Play Again) — wipe any
           // lingering local UI state so the next round starts clean for me too.
@@ -2414,33 +2267,6 @@ function copyRoomCode() {
 // ═══════════════════════════════════════════
 // LOBBY ACTIONS
 // ═══════════════════════════════════════════
-
-// Host-only: re-push our canonical state on a heartbeat so any client whose
-// state got corrupted by a server sync gap (some joiners receive a state with
-// only [host, self] instead of the full roster) catches up within a few
-// seconds. Runs through lobby AND game phase, but skipped briefly after a
-// non-host mutate to avoid stomping on their in-flight action.
-//
-// Heartbeat is paused for ~1.2s after ANY mutation (ours or echoed back from
-// the server) — that's enough time for any non-host's action to land server-side
-// before we re-broadcast. Without this guard, the heartbeat could silently
-// overwrite e.g. a player's drawn card mid-turn.
-let _lastBroadcastReceivedAt = 0;
-function startHostHeartbeat() {
-  if (window._hostHeartbeat) clearInterval(window._hostHeartbeat);
-  window._hostHeartbeat = setInterval(() => {
-    if (!isHost || !gameState || gameState.phase === 'end') {
-      clearInterval(window._hostHeartbeat);
-      window._hostHeartbeat = null;
-      return;
-    }
-    // Pause heartbeat briefly after recent state activity to avoid clobbering
-    // a non-host's in-flight mutate before its echo has fully propagated.
-    if (Date.now() - _lastBroadcastReceivedAt < 1200) return;
-    sendToServer({ type: 'setState', state: gameState });
-  }, 1500);
-}
-
 async function hostGame() {
   const name = document.getElementById('playerName').value.trim();
   if (!name) { showToast('Enter your name first'); return; }
@@ -2482,10 +2308,6 @@ async function hostGame() {
   connectToRoom(roomCode, () => {
     sendToServer({ type: 'setState', state: gs });
   });
-  // Start the periodic re-broadcast so any joiner whose state lags behind
-  // the host (PartyKit occasionally sends them a partial player list) is
-  // automatically refreshed within ~1.5 seconds.
-  startHostHeartbeat();
 
   renderWaiting(gs);
   showScreen('waitingScreen');
@@ -2525,13 +2347,6 @@ async function startGame() {
   state.scores = Object.fromEntries(gs.players.map(p => [p.id, 0]));
   gameState = state;
   sendToServer({ type: 'setState', state });
-  // Burst broadcast: push the game-start state again after a short delay so
-  // any joiner whose initial-state broadcast was filtered by the server picks
-  // up the full roster + hands. The heartbeat will continue beyond this.
-  setTimeout(() => { if (gameState) sendToServer({ type: 'setState', state: gameState }); }, 400);
-  setTimeout(() => { if (gameState) sendToServer({ type: 'setState', state: gameState }); }, 1000);
-  // Re-arm heartbeat in case it self-terminated; it'll keep running through gameplay.
-  startHostHeartbeat();
   showScreen('gameScreen');
   renderGame(state);
   // Deal animation only on the very first game start
@@ -4227,10 +4042,20 @@ function _endFireAndRestore(gs) {
     // Defensive default: shouldn't happen since startFire always snapshots
     gs.phase = 'draw';
   }
-  // House rule: a player whose hand is fully burned stays empty. Their score
-  // for the round is 0 (or negative, if jokers were involved before). They no
-  // longer get a silent replacement card from the deck. Burning down to zero
-  // is a legitimate, risky strategy — not something the game patches over.
+  // Replenish any player whose hand was burned to empty so they can keep playing
+  // and so they can't auto-win with a score of zero.
+  for (const p of gs.players) {
+    const hand = gs.hands[p.id] || [];
+    const remaining = hand.filter(c => c).length;
+    if (remaining === 0) {
+      reshuffleDeckIfNeeded(gs);
+      const replacement = gs.deck.pop();
+      if (replacement) {
+        // Reset the hand to a single slot containing the replacement card
+        gs.hands[p.id] = [replacement];
+      }
+    }
+  }
 }
 
 
@@ -4787,9 +4612,6 @@ async function playAgain() {
   window._initialFlipShownFor = null;
   window._seenFireEvents = new Set();
   window._seenSwapEvents = new Set();
-  // Re-arm the host heartbeat since the game ended (the interval terminates
-  // when phase reaches 'end'). Now that we're back in lobby, keep syncing.
-  startHostHeartbeat();
   showScreen('waitingScreen');
 }
 
