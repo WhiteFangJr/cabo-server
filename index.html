@@ -2146,7 +2146,61 @@ function connectToRoom(code, onOpenExtra) {
       if (msg.type === 'state') {
         const gs = msg.state;
         const prevGs = gameState;
+
+        // ── Defensive players-list merge ──
+        // The PartyKit server appears to occasionally broadcast a state whose
+        // players list is missing one or more joiners that we'd already seen
+        // (most often: a non-host's initial state echoes back as [host, self]
+        // even though more players are actually in the room). If our previous
+        // gameState knew about players the new state doesn't mention, keep
+        // them — both in the players list and in the per-player score/hand
+        // dictionaries, so a 4-player game doesn't collapse to 2 on screen.
+        // This only runs in lobby phase; once the game is dealt, hands are
+        // authoritative and shouldn't be merged.
+        let mergedAnyPlayer = false;
+        if (prevGs?.players && gs?.players && gs.phase === 'lobby') {
+          const incomingIds = new Set(gs.players.map(p => p.id));
+          for (const p of prevGs.players) {
+            if (!incomingIds.has(p.id)) {
+              gs.players.push(p);
+              mergedAnyPlayer = true;
+            }
+          }
+        }
+
         gameState = gs;
+
+        // If we're the host AND our merge added players the server dropped,
+        // re-broadcast the canonical state so other clients (especially other
+        // joiners whose state is stuck at [host, self]) get the full roster.
+        // Only fires in lobby and only when there's something new to push, so
+        // it can't loop.
+        if (isHost && mergedAnyPlayer && gs.phase === 'lobby') {
+          setTimeout(() => {
+            if (gameState && gameState.phase === 'lobby') {
+              sendToServer({ type: 'setState', state: gameState });
+            }
+          }, 250);
+        }
+
+        // Also: whenever the host sees the lobby player list change (typically
+        // because a new joiner just arrived), re-broadcast the canonical state.
+        // The server-side broadcast that resulted from the join may have only
+        // reached us (the host) — re-pushing through setState forces a fresh
+        // round-trip that lands on every client.
+        if (isHost
+            && gs.phase === 'lobby'
+            && prevGs?.phase === 'lobby'
+            && prevGs.players
+            && gs.players
+            && gs.players.length !== prevGs.players.length) {
+          setTimeout(() => {
+            if (gameState && gameState.phase === 'lobby') {
+              sendToServer({ type: 'setState', state: gameState });
+            }
+          }, 300);
+        }
+
         if (gs.phase === 'lobby') {
           // Coming back from a finished game (host hit Play Again) — wipe any
           // lingering local UI state so the next round starts clean for me too.
@@ -4042,20 +4096,10 @@ function _endFireAndRestore(gs) {
     // Defensive default: shouldn't happen since startFire always snapshots
     gs.phase = 'draw';
   }
-  // Replenish any player whose hand was burned to empty so they can keep playing
-  // and so they can't auto-win with a score of zero.
-  for (const p of gs.players) {
-    const hand = gs.hands[p.id] || [];
-    const remaining = hand.filter(c => c).length;
-    if (remaining === 0) {
-      reshuffleDeckIfNeeded(gs);
-      const replacement = gs.deck.pop();
-      if (replacement) {
-        // Reset the hand to a single slot containing the replacement card
-        gs.hands[p.id] = [replacement];
-      }
-    }
-  }
+  // House rule: a player whose hand is fully burned stays empty. Their score
+  // for the round is 0 (or negative, if jokers were involved before). They no
+  // longer get a silent replacement card from the deck. Burning down to zero
+  // is a legitimate, risky strategy — not something the game patches over.
 }
 
 
