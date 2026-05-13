@@ -3021,16 +3021,28 @@ function renderGame(gs) {
       return hasBadge ? `<div style="position:relative;display:inline-block">${badge}${cardHtml}</div>` : cardHtml;
     };
 
-    // POV layout: slots 0,1 are near the viewer (bottom row), slots 2+ are near the opponent (top row).
+    // POV layout: slots 0,1 are near the viewer (bottom row), slots 2,3 are near the opponent (top row).
+    // Penalty cards (index 4+) go into separate penalty rows — never displacing existing positions.
     // Sparse arrays: null slots render as ghost placeholders to preserve the player's mental map.
-    // We always split at index 2: slots 0..1 → bottom, slots 2..end → top.
-    const slotCount = hand.length; // may include trailing nulls
-    let topCards = [], bottomCards = [];
+    const slotCount = hand.length;
+    let topCards = [], bottomCards = [], penaltyCards = [];
     for (let i = 0; i < slotCount; i++) {
       if (i < 2) {
         bottomCards.push(renderOppCard(hand[i], i, ' near-card'));
-      } else {
+      } else if (i < 4) {
         topCards.push(renderOppCard(hand[i], i));
+      } else {
+        penaltyCards.push(renderOppCard(hand[i], i));
+      }
+    }
+
+    // Build penalty rows in pairs of 2
+    let penaltyHtml = '';
+    if (penaltyCards.length > 0) {
+      penaltyHtml = `<div style="font-size:8px;color:rgba(249,115,22,0.7);font-family:'Cinzel',serif;letter-spacing:0.06em;margin-top:2px">⚠ penalty</div>`;
+      for (let pi = 0; pi < penaltyCards.length; pi += 2) {
+        const row = penaltyCards.slice(pi, pi + 2);
+        penaltyHtml += `<div class="opponent-hand" style="margin-top:2px">${row.join('')}</div>`;
       }
     }
 
@@ -3039,6 +3051,7 @@ function renderGame(gs) {
       ${topCards.length ? `<div class="opponent-hand" style="margin-bottom:5px;opacity:0.75">${topCards.join('')}</div>` : ''}
       <div class="opponent-hand">${(bottomCards.length ? bottomCards : topCards).join('')}</div>
       ${topCards.length && bottomCards.length ? `<div class="pov-label">← near you →</div>` : ''}
+      ${penaltyHtml}
     </div>`;
   };
 
@@ -3324,7 +3337,7 @@ function renderActions(gs, isMyTurn, myHand) {
       return;
     }
 
-    if (amResponder) {
+    if (amResponder && fire.burnedValue) {
       // It's this player's turn to respond to the fire
       const burnedVal = fire.burnedValue;
       const selCount = fireSelection.length;
@@ -3342,8 +3355,13 @@ function renderActions(gs, isMyTurn, myHand) {
     }
 
     // Observer — not the starter, not the current responder
-    const currentResponderName = gs.players.find(p => p.id === nextResponder)?.name || '...';
-    msg.innerHTML = `<div class="fire-banner"><div class="fire-banner-title">🔥 Fire in progress</div><div class="fire-banner-sub">${starter} burned ${fire.burnedValue || '...'}s. Waiting for ${currentResponderName}...</div></div>`;
+    if (!fire.burnedValue) {
+      // Starter is still selecting cards to burn
+      msg.innerHTML = `<div class="fire-banner"><div class="fire-banner-title">🔥 Fire in progress</div><div class="fire-banner-sub">${starter} is selecting cards to burn...</div></div>`;
+    } else {
+      const currentResponderName = gs.players.find(p => p.id === nextResponder)?.name || '...';
+      msg.innerHTML = `<div class="fire-banner"><div class="fire-banner-title">🔥 Fire in progress</div><div class="fire-banner-sub">${starter} burned ${fire.burnedValue}s. Waiting for ${currentResponderName}...</div></div>`;
+    }
     return;
   }
 
