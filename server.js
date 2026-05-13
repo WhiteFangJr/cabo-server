@@ -43,6 +43,41 @@ function applyJoin(room, playerId, playerName, conn) {
 const httpServer = createServer((req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   const url = new URL(req.url, 'http://localhost');
+
+  // Diagnostic: list all active rooms
+  if (url.pathname === '/rooms') {
+    const summary = Object.entries(rooms).map(([code, room]) => ({
+      room: code,
+      phase: room.state?.phase ?? 'empty',
+      players: room.state?.players?.map(p => p.name) ?? [],
+      connections: room.conns.size,
+      pendingJoins: room.pendingJoins.length,
+    }));
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ totalRooms: summary.length, rooms: summary }, null, 2));
+    return;
+  }
+
+  // Delete a specific room (also closes all its WebSocket connections)
+  const deleteMatch = url.pathname.match(/^\/rooms\/delete\/([^/]+)$/);
+  if (deleteMatch) {
+    const code = deleteMatch[1].toLowerCase();
+    const room = rooms[code];
+    if (!room) {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Room not found', room: code }));
+      return;
+    }
+    // Close all active WebSocket connections in this room
+    for (const conn of room.conns) {
+      try { conn.close(1000, 'Room deleted by admin'); } catch (e) {}
+    }
+    delete rooms[code];
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ deleted: true, room: code }));
+    return;
+  }
+
   const match = url.pathname.match(/^\/parties\/main\/([^/]+)$/);
   if (match) {
     const room = rooms[match[1]];
