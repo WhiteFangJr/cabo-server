@@ -2863,7 +2863,7 @@ function getTaunt(gs) {
     currentTaunt = pickRandom(GENERAL_TAUNTS);
   }
   const elapsed = (Date.now() - turnStartTime) / 1000;
-  if (elapsed > 20 && gs.currentTurn) {
+  if (elapsed > 9 && gs.currentTurn) {
     currentTaunt = pickRandom(IDLE_TAUNTS);
   }
 
