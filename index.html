@@ -2775,7 +2775,8 @@ function renderWaiting(gs) {
 // auto-plays for that player (draw + discard). If the host is the idle one,
 // any other client can step in as fallback.
 let autoPlayStateTimestamp = 0;  // last time gameState changed
-let autoPlayLastStateJSON = '';  // serialised snapshot to detect real changes
+let autoPlayStateVersion = 0;   // incremented on every state change
+let autoPlayLastVersion = 0;    // last version we saw
 let autoPlayTimer = null;
 const AUTO_PLAY_SECONDS = 15;
 
@@ -2872,9 +2873,9 @@ async function autoForcePlay(gs) {
 // Hook into state updates — every time gameState changes, reset the clock.
 // We do this by wrapping the state reception in the socket handler.
 const _origAutoPlayCheck = () => {
-  const newJSON = JSON.stringify(gameState);
-  if (newJSON !== autoPlayLastStateJSON) {
-    autoPlayLastStateJSON = newJSON;
+  autoPlayStateVersion++;
+  if (autoPlayStateVersion !== autoPlayLastVersion) {
+    autoPlayLastVersion = autoPlayStateVersion;
     resetAutoPlayClock();
   }
 };
@@ -3670,9 +3671,9 @@ async function selectHandCard(i) {
       };
     });
     selectedHandIndex = -1;
-    // Clear the broadcast event after the animation window so a stale state
-    // re-broadcast (e.g. to a late-joining client) doesn't keep retriggering it.
-    setTimeout(() => { if (gameState) mutate(gs => { gs.swapAnimEvent = null; }); }, 2200);
+    // Clear the animation event locally after the animation window.
+    // No broadcast needed — each client tracks seen events independently.
+    setTimeout(() => { if (gameState) gameState.swapAnimEvent = null; }, 2200);
   }
 }
 
@@ -3822,7 +3823,7 @@ async function abilitySwapCommit(myIndex) {
       slotB: { ownerId: oppId, index: oppIndex },
     };
   });
-  setTimeout(() => { if (gameState) mutate(gs => { gs.swapAnimEvent = null; }); }, 2200);
+  setTimeout(() => { if (gameState) gameState.swapAnimEvent = null; }, 2200);
 
   if (isSwapPeek && receivedCard) {
     // Show the card the player just received
@@ -3917,7 +3918,7 @@ async function peekSwapCommit(myIndex) {
       slotB: { ownerId: oppId, index: oppIndex },
     };
   });
-  setTimeout(() => { if (gameState) mutate(gs => { gs.swapAnimEvent = null; }); }, 2200);
+  setTimeout(() => { if (gameState) gameState.swapAnimEvent = null; }, 2200);
   abilityTarget = null;
 }
 
@@ -4263,7 +4264,7 @@ async function burnFireSelection() {
       // Burns animate to the discard pile; per-push animations run later, one
       // per assignment, inside assignPushToOpp().
       playFireBurnAnimation(burnedSlots, []);
-      setTimeout(() => { if (gameState) mutate(gs => { gs.fireAnimEvent = null; }); }, 2200);
+      setTimeout(() => { if (gameState) gameState.fireAnimEvent = null; }, 2200);
     }
     fireSelection = [];
     return;
@@ -4396,7 +4397,7 @@ async function burnFireSelection() {
     if (didValidBurn) {
       // Burns animate to discard; per-push animations run later, one per assignment.
       playFireBurnAnimation(burnedSlots2, []);
-      setTimeout(() => { if (gameState) mutate(gs => { gs.fireAnimEvent = null; }); }, 2200);
+      setTimeout(() => { if (gameState) gameState.fireAnimEvent = null; }, 2200);
     }
     fireSelection = [];
   }
