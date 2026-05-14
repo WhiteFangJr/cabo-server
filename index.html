@@ -263,12 +263,12 @@
   }
   .opponents-top {
     display: flex;
-    gap: 10px;
-    justify-content: center;
+    gap: 6px;
+    justify-content: space-evenly;
     align-items: flex-end;
     flex-wrap: wrap;
     width: 100%;
-    padding: 0 4px;
+    padding: 0 8px;
   }
   .middle-row {
     display: flex;
@@ -294,11 +294,13 @@
     background: rgba(0,0,0,0.35);
     border: 1px solid rgba(201,168,76,0.12);
     border-radius: var(--radius);
-    padding: 10px;
+    padding: 8px 12px;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 4px;
+    flex: 1 1 0;
+    max-width: 160px;
   }
   .opponent-name {
     font-family: 'Cinzel', serif;
@@ -310,6 +312,10 @@
     display: flex;
     align-items: center;
     gap: 5px;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .turn-indicator { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); animation: pulse 1s infinite; }
   @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
@@ -1242,6 +1248,117 @@
     font-weight: 600;
   }
 
+  /* ── CHAT ── */
+  .game-log-wrapper {
+    position: relative;
+  }
+  .chat-toggle-btn {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: rgba(201,168,76,0.12);
+    border: 1px solid rgba(201,168,76,0.25);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    z-index: 5;
+    transition: background 0.2s;
+  }
+  .chat-toggle-btn:hover { background: rgba(201,168,76,0.22); }
+  .chat-toggle-btn .chat-badge {
+    position: absolute; top: -4px; right: -4px;
+    min-width: 16px; height: 16px; border-radius: 8px;
+    background: #ef4444; color: #fff; font-size: 9px;
+    display: none; align-items: center; justify-content: center;
+    padding: 0 4px; font-family: -apple-system, sans-serif; font-weight: 600;
+  }
+  .chat-toggle-btn .chat-badge.visible { display: flex; }
+
+  .chat-overlay {
+    display: none;
+    position: fixed;
+    bottom: 8px; left: 8px; right: 8px;
+    max-height: 55vh;
+    background: rgba(12,17,23,0.50);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(201,168,76,0.18);
+    border-radius: 14px;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 100;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  .chat-overlay.open { display: flex; }
+  .chat-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(201,168,76,0.1);
+    font-family: 'Cinzel', serif;
+  }
+  .chat-header-title { font-size: 13px; color: var(--gold); letter-spacing: 0.06em; }
+  .chat-close {
+    width: 24px; height: 24px; border-radius: 50%;
+    background: rgba(201,168,76,0.1); border: none;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: rgba(201,168,76,0.5); font-size: 14px;
+  }
+  .chat-close:hover { background: rgba(201,168,76,0.2); }
+  .chat-messages {
+    flex: 1; overflow-y: auto; padding: 8px 10px;
+    display: flex; flex-direction: column; gap: 8px;
+    min-height: 80px; max-height: 40vh;
+  }
+  .chat-msg { display: flex; gap: 6px; align-items: flex-start; }
+  .chat-msg.mine { flex-direction: row-reverse; }
+  .chat-msg-avatar {
+    width: 22px; height: 22px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; font-size: 9px; font-weight: 600;
+  }
+  .chat-msg-body { max-width: 78%; }
+  .chat-msg-meta { font-size: 9px; color: rgba(201,168,76,0.4); margin-bottom: 2px; font-family: 'Cinzel', serif; }
+  .chat-msg.mine .chat-msg-meta { text-align: right; }
+  .chat-msg-bubble {
+    padding: 6px 10px; font-size: 12px; line-height: 1.4;
+    color: rgba(220,215,200,0.88); word-break: break-word;
+  }
+  .chat-msg:not(.mine) .chat-msg-bubble {
+    background: rgba(139,157,195,0.1);
+    border: 1px solid rgba(139,157,195,0.1);
+    border-radius: 0 10px 10px 10px;
+  }
+  .chat-msg.mine .chat-msg-bubble {
+    background: rgba(201,168,76,0.12);
+    border: 1px solid rgba(201,168,76,0.15);
+    border-radius: 10px 0 10px 10px;
+  }
+  .chat-input-row {
+    padding: 8px 10px;
+    border-top: 1px solid rgba(201,168,76,0.08);
+    display: flex; gap: 6px; align-items: center;
+  }
+  .chat-input {
+    flex: 1; background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(201,168,76,0.12);
+    border-radius: 18px; padding: 7px 14px;
+    font-size: 13px; color: rgba(240,232,208,0.9);
+    font-family: -apple-system, sans-serif;
+    outline: none;
+  }
+  .chat-input::placeholder { color: rgba(201,168,76,0.3); }
+  .chat-input:focus { border-color: rgba(201,168,76,0.3); }
+  .chat-send-btn {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: rgba(201,168,76,0.15); border: none;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--gold); font-size: 14px;
+    transition: background 0.2s;
+  }
+  .chat-send-btn:hover { background: rgba(201,168,76,0.25); }
+
 
   /* Fire push assignment — selected source card (mine) + target opp slot (pulses green) */
   .card.fire-push-source {
@@ -1492,9 +1609,9 @@
     .pile-stack::before,
     .pile-stack::after { width: 48px; height: 72px; }
     .game-header { padding: 4px; }
-    .opponents-top { gap: 6px; }
+    .opponents-top { gap: 4px; padding: 0 4px; }
     .middle-row { gap: 6px; }
-    .opponent-zone { padding: 4px; min-width: 0; }
+    .opponent-zone { padding: 4px 6px; min-width: 0; max-width: none; }
   }
 
   /* ═══════════════════════════════════════════
@@ -1782,7 +1899,28 @@
     </button>
   </div>
 
-  <div class="game-log" id="gameLog"></div>
+  <div class="game-log-wrapper">
+    <div class="game-log" id="gameLog" style="padding-right:42px"></div>
+    <div class="chat-toggle-btn" onclick="toggleChat()" title="Open chat">
+      <span style="font-size:15px;color:#c9a84c">✉</span>
+      <span class="chat-badge" id="chatBadge"></span>
+    </div>
+  </div>
+</div>
+
+<!-- CHAT OVERLAY -->
+<div class="chat-overlay" id="chatOverlay">
+  <div class="chat-header">
+    <span class="chat-header-title">Chat</span>
+    <button class="chat-close" onclick="toggleChat()" title="Close chat">✕</button>
+  </div>
+  <div class="chat-messages" id="chatMessages">
+    <div style="text-align:center;font-size:11px;color:rgba(201,168,76,0.3);padding:16px 0;font-family:'Cinzel',serif">No messages yet — break the silence!</div>
+  </div>
+  <div class="chat-input-row">
+    <input class="chat-input" id="chatInput" type="text" placeholder="Type a message..." maxlength="200" autocomplete="off" onkeydown="if(event.key==='Enter')sendChat()">
+    <button class="chat-send-btn" onclick="sendChat()" title="Send">➤</button>
+  </div>
 </div>
 
 <!-- OVERLAYS -->
@@ -2249,6 +2387,8 @@ function connectToRoom(code, onOpenExtra) {
         }, 800);
       } else if (msg.type === 'error') {
         showToast(msg.message || 'Server error');
+      } else if (msg.type === 'chat') {
+        receiveChat(msg);
       }
       // Reset auto-play clock on any state change
       if (typeof _origAutoPlayCheck === 'function') _origAutoPlayCheck();
@@ -4112,7 +4252,11 @@ async function burnFireSelection() {
       gs.fire.burnedValue = burnedValue;
       gs.fire.starterCards = [...removedFromSelf, ...removedFromOpp.map(o => o.card)];
       gs.fire.starterPenalty = false;
-      gs.lastAction = `🔥 ${myName} burned ${totalBurned}x ${burnedValue} (including from opponents) — Fire spreads!`;
+      if (removedFromOpp.length > 0) {
+        gs.lastAction = `🔥 ${myName} burned ${totalBurned}x ${burnedValue} (including ${removedFromOpp.length} from opponents) — Fire spreads!`;
+      } else {
+        gs.lastAction = `🔥 ${myName} burned ${totalBurned}x ${burnedValue} — Fire spreads!`;
+      }
     });
 
     if (allSameValue) {
@@ -4415,20 +4559,6 @@ function _endFireAndRestore(gs) {
     // Defensive default: shouldn't happen since startFire always snapshots
     gs.phase = 'draw';
   }
-  // Replenish any player whose hand was burned to empty so they can keep playing
-  // and so they can't auto-win with a score of zero.
-  for (const p of gs.players) {
-    const hand = gs.hands[p.id] || [];
-    const remaining = hand.filter(c => c).length;
-    if (remaining === 0) {
-      reshuffleDeckIfNeeded(gs);
-      const replacement = gs.deck.pop();
-      if (replacement) {
-        // Reset the hand to a single slot containing the replacement card
-        gs.hands[p.id] = [replacement];
-      }
-    }
-  }
 }
 
 
@@ -4644,6 +4774,106 @@ function addLog(msg) {
   ).join('');
   el.scrollTop = el.scrollHeight;
 }
+
+// ═══════════════════════════════════════════
+// CHAT SYSTEM
+// ═══════════════════════════════════════════
+let chatMessages = [];
+let chatOpen = false;
+let chatUnread = 0;
+const CHAT_COLORS = [
+  'rgba(139,157,195,0.15)', 'rgba(196,68,68,0.15)', 'rgba(201,168,76,0.15)',
+  'rgba(76,175,80,0.15)', 'rgba(156,39,176,0.15)', 'rgba(0,188,212,0.15)'
+];
+const CHAT_TEXT_COLORS = ['#8b9dc3', '#c44', '#c9a84c', '#4caf50', '#9c27b0', '#00bcd4'];
+
+function getChatColor(playerId) {
+  if (!gameState || !gameState.players) return { bg: CHAT_COLORS[0], text: CHAT_TEXT_COLORS[0] };
+  const idx = gameState.players.findIndex(p => p.id === playerId);
+  const i = idx >= 0 ? idx % CHAT_COLORS.length : 0;
+  return { bg: CHAT_COLORS[i], text: CHAT_TEXT_COLORS[i] };
+}
+
+function toggleChat() {
+  chatOpen = !chatOpen;
+  const overlay = document.getElementById('chatOverlay');
+  overlay.classList.toggle('open', chatOpen);
+  if (chatOpen) {
+    chatUnread = 0;
+    updateChatBadge();
+    const msgs = document.getElementById('chatMessages');
+    msgs.scrollTop = msgs.scrollHeight;
+    document.getElementById('chatInput').focus();
+  }
+}
+
+function updateChatBadge() {
+  const badge = document.getElementById('chatBadge');
+  if (!badge) return;
+  if (chatUnread > 0) {
+    badge.textContent = chatUnread > 9 ? '9+' : chatUnread;
+    badge.classList.add('visible');
+  } else {
+    badge.classList.remove('visible');
+  }
+}
+
+function sendChat() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text || !myId || !myName) return;
+  input.value = '';
+  sendToServer({ type: 'chat', playerId: myId, playerName: myName, text: text });
+}
+
+function receiveChat(msg) {
+  chatMessages.push({
+    playerId: msg.playerId,
+    playerName: msg.playerName,
+    text: msg.text,
+    time: Date.now()
+  });
+  if (chatMessages.length > 50) chatMessages.shift();
+  if (!chatOpen) {
+    chatUnread++;
+    updateChatBadge();
+  }
+  renderChatMessages();
+}
+
+function renderChatMessages() {
+  const container = document.getElementById('chatMessages');
+  if (!container) return;
+  if (chatMessages.length === 0) {
+    container.innerHTML = '<div style="text-align:center;font-size:11px;color:rgba(201,168,76,0.3);padding:16px 0;font-family:\'Cinzel\',serif">No messages yet — break the silence!</div>';
+    return;
+  }
+  container.innerHTML = chatMessages.map(m => {
+    const isMine = m.playerId === myId;
+    const color = getChatColor(m.playerId);
+    const initial = (m.playerName || '?')[0].toUpperCase();
+    const ago = formatTimeAgo(m.time);
+    return `<div class="chat-msg${isMine ? ' mine' : ''}">
+      ${!isMine ? `<div class="chat-msg-avatar" style="background:${color.bg}"><span style="color:${color.text}">${escHtml(initial)}</span></div>` : ''}
+      <div class="chat-msg-body">
+        <div class="chat-msg-meta">${isMine ? 'You' : escHtml(m.playerName)} <span style="color:rgba(201,168,76,0.2)">${ago}</span></div>
+        <div class="chat-msg-bubble">${escHtml(m.text)}</div>
+      </div>
+    </div>`;
+  }).join('');
+  container.scrollTop = container.scrollHeight;
+}
+
+function formatTimeAgo(ts) {
+  const secs = Math.floor((Date.now() - ts) / 1000);
+  if (secs < 10) return 'just now';
+  if (secs < 60) return secs + 's ago';
+  const mins = Math.floor(secs / 60);
+  return mins + 'm ago';
+}
+
+// Refresh time-ago labels every 30s
+setInterval(() => { if (chatMessages.length > 0) renderChatMessages(); }, 30000);
 
 let toastTimer = null;
 function showToast(msg) {

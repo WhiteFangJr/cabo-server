@@ -139,6 +139,20 @@ wss.on('connection', (conn, req) => {
         broadcast(room, { type: 'state', state: room.state });
         break;
       }
+
+      case 'chat': {
+        // Broadcast chat message to all players in the room (including sender)
+        const text = (msg.text || '').slice(0, 200); // cap at 200 chars
+        if (text) {
+          broadcast(room, {
+            type: 'chat',
+            playerId: msg.playerId,
+            playerName: msg.playerName,
+            text: text
+          });
+        }
+        break;
+      }
     }
   });
 
