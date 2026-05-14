@@ -1281,6 +1281,7 @@
     display: none;
     position: fixed;
     bottom: 68px; left: 8px; right: 8px;
+    max-width: 400px;
     max-height: 50vh;
     background: rgba(12,17,23,0.55);
     backdrop-filter: blur(12px);
@@ -1292,6 +1293,18 @@
     z-index: 100;
     font-family: -apple-system, BlinkMacSystemFont, sans-serif;
     box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  }
+  /* On desktop, anchor chat overlay to bottom-right near the FAB */
+  @media (min-width: 600px) {
+    .chat-overlay {
+      left: auto;
+      right: 16px;
+    }
+    .chat-fab {
+      bottom: 20px;
+      right: 20px;
+      width: 48px; height: 48px;
+    }
   }
   .chat-overlay.open { display: flex; }
   .chat-header {
