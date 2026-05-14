@@ -1249,47 +1249,49 @@
   }
 
   /* ── CHAT ── */
-  .game-log-wrapper {
-    position: relative;
-  }
-  .chat-toggle-btn {
-    position: absolute;
-    right: 6px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 30px; height: 30px;
+  .chat-fab {
+    position: fixed;
+    bottom: 16px;
+    right: 16px;
+    width: 44px; height: 44px;
     border-radius: 50%;
-    background: rgba(201,168,76,0.12);
-    border: 1px solid rgba(201,168,76,0.25);
-    display: flex; align-items: center; justify-content: center;
+    background: rgba(201,168,76,0.15);
+    border: 1px solid rgba(201,168,76,0.3);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: none; /* shown via JS when in game */
+    align-items: center; justify-content: center;
     cursor: pointer;
-    z-index: 5;
-    transition: background 0.2s;
+    z-index: 90;
+    transition: background 0.2s, transform 0.15s;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
   }
-  .chat-toggle-btn:hover { background: rgba(201,168,76,0.22); }
-  .chat-toggle-btn .chat-badge {
+  .chat-fab:hover { background: rgba(201,168,76,0.25); transform: scale(1.05); }
+  .chat-fab:active { transform: scale(0.95); }
+  .chat-fab .chat-badge {
     position: absolute; top: -4px; right: -4px;
-    min-width: 16px; height: 16px; border-radius: 8px;
-    background: #ef4444; color: #fff; font-size: 9px;
+    min-width: 18px; height: 18px; border-radius: 9px;
+    background: #ef4444; color: #fff; font-size: 10px;
     display: none; align-items: center; justify-content: center;
     padding: 0 4px; font-family: -apple-system, sans-serif; font-weight: 600;
   }
-  .chat-toggle-btn .chat-badge.visible { display: flex; }
+  .chat-fab .chat-badge.visible { display: flex; }
 
   .chat-overlay {
     display: none;
     position: fixed;
-    bottom: 8px; left: 8px; right: 8px;
-    max-height: 55vh;
-    background: rgba(12,17,23,0.50);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    bottom: 68px; left: 8px; right: 8px;
+    max-height: 50vh;
+    background: rgba(12,17,23,0.55);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(201,168,76,0.18);
     border-radius: 14px;
     flex-direction: column;
     overflow: hidden;
     z-index: 100;
     font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
   }
   .chat-overlay.open { display: flex; }
   .chat-header {
@@ -1899,13 +1901,13 @@
     </button>
   </div>
 
-  <div class="game-log-wrapper">
-    <div class="game-log" id="gameLog" style="padding-right:42px"></div>
-    <div class="chat-toggle-btn" onclick="toggleChat()" title="Open chat">
-      <span style="font-size:15px;color:#c9a84c">✉</span>
-      <span class="chat-badge" id="chatBadge"></span>
-    </div>
-  </div>
+  <div class="game-log" id="gameLog"></div>
+</div>
+
+<!-- Floating chat button -->
+<div class="chat-fab" id="chatFab" onclick="toggleChat()" title="Open chat">
+  <span style="font-size:18px">✉</span>
+  <span class="chat-badge" id="chatBadge"></span>
 </div>
 
 <!-- CHAT OVERLAY -->
@@ -4762,6 +4764,11 @@ function renderDebugState(gs) {
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
+  // Show chat FAB only during the game
+  const fab = document.getElementById('chatFab');
+  if (fab) fab.style.display = (id === 'gameScreen') ? 'flex' : 'none';
+  // Close chat overlay when leaving game screen
+  if (id !== 'gameScreen' && chatOpen) toggleChat();
 }
 
 let logLines = [];
@@ -4798,7 +4805,9 @@ function getChatColor(playerId) {
 function toggleChat() {
   chatOpen = !chatOpen;
   const overlay = document.getElementById('chatOverlay');
+  const fab = document.getElementById('chatFab');
   overlay.classList.toggle('open', chatOpen);
+  if (fab) fab.style.display = chatOpen ? 'none' : 'flex';
   if (chatOpen) {
     chatUnread = 0;
     updateChatBadge();
@@ -4824,10 +4833,18 @@ function sendChat() {
   const text = input.value.trim();
   if (!text || !myId || !myName) return;
   input.value = '';
+  // Local echo — show message immediately without waiting for server roundtrip
+  receiveChat({ playerId: myId, playerName: myName, text: text });
   sendToServer({ type: 'chat', playerId: myId, playerName: myName, text: text });
 }
 
 function receiveChat(msg) {
+  // Deduplicate: if this is our own message echoed back from the server, skip it
+  // (we already added it locally in sendChat for instant feedback)
+  if (msg.playerId === myId && chatMessages.length > 0) {
+    const last = chatMessages[chatMessages.length - 1];
+    if (last.playerId === myId && last.text === msg.text && (Date.now() - last.time) < 3000) return;
+  }
   chatMessages.push({
     playerId: msg.playerId,
     playerName: msg.playerName,
