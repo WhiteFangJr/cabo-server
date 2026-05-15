@@ -343,8 +343,10 @@
     border: 2px solid transparent;
     flex-shrink: 0;
     overflow: hidden;
+    perspective: 600px;
+    transform-style: preserve-3d;
   }
-  .card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+  .card:hover { transform: translateY(-4px) rotateX(2deg); box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
   .card.face-down {
     background: var(--card-back);
     border-color: rgba(201,168,76,0.2);
@@ -387,7 +389,7 @@
   .card.selected {
     border-color: var(--gold);
     box-shadow: 0 0 0 2px var(--gold), 0 8px 24px rgba(201,168,76,0.35);
-    transform: translateY(-6px);
+    transform: translateY(-6px) perspective(600px) rotateX(3deg);
   }
   .card.highlighted { border-color: #60a5fa; box-shadow: 0 0 0 2px #60a5fa; }
   .card.small { width: 52px; height: 78px; border-radius: 6px; }
@@ -398,7 +400,7 @@
   .card.fire-selected {
     border-color: #f97316;
     box-shadow: 0 0 0 2px #f97316, 0 8px 24px rgba(249,115,22,0.28);
-    transform: translateY(-6px);
+    transform: translateY(-6px) perspective(600px) rotateX(3deg);
   }
   .card.near-card { box-shadow: 0 0 0 1.5px rgba(201,168,76,0.45), 0 4px 12px rgba(0,0,0,0.3); }
   .card.just-swapped {
@@ -472,7 +474,7 @@
   .my-zone-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
   .my-name { font-family: 'Cinzel', serif; font-size: 13px; letter-spacing: 0.1em; color: var(--gold); text-transform: uppercase; }
   .my-score { font-family: 'Cinzel', serif; font-size: 12px; color: var(--muted); }
-  .hand-row, .opponent-hand { display: grid; grid-template-columns: repeat(2, max-content); gap: 8px; justify-content: center; }
+  .hand-row, .opponent-hand { display: grid; grid-template-columns: repeat(2, max-content); gap: 8px; justify-content: center; perspective: 800px; }
   .opponent-hand { gap: 6px; }
 
   /* Action bar */
@@ -547,7 +549,11 @@
     gap: 12px;
     pointer-events: none; /* clicks pass through to underlying cards/buttons */
   }
-  .peek-overlay.show { display: flex; }
+  .peek-overlay.show { display: flex; animation: peekIn 0.35s cubic-bezier(0.34,1.56,0.64,1) both; }
+  @keyframes peekIn {
+    0% { opacity: 0; transform: translateX(-50%) scale(0.7) rotateY(-30deg); }
+    100% { opacity: 1; transform: translateX(-50%) scale(1) rotateY(0deg); }
+  }
   .peek-overlay button { pointer-events: auto; } /* but Got-it button still works */
   #peekMsg { font-family: 'Cinzel', serif; font-size: 13px; color: var(--gold); letter-spacing: 0.1em; }
 
@@ -960,24 +966,49 @@
   .pile-stack[data-depth="1"]::after,
   .pile-stack[data-depth="2"]::after { display: none; }
 
-  /* Initial-peek flip — applied to slots 2/3 on round start and on Begin */
+  /* Initial-peek flip — true 3D with perspective, shadow shift, and subtle bounce */
   @keyframes flipReveal {
-    0%   { transform: rotateY(-180deg); opacity: 0.4; }
-    50%  { transform: rotateY(-90deg)  scaleY(1.04); opacity: 0.9; }
-    100% { transform: rotateY(0deg); opacity: 1; }
+    0%   { transform: perspective(600px) rotateY(-180deg) scale(0.95); opacity: 0.3; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+    40%  { transform: perspective(600px) rotateY(-90deg) scale(1.02); opacity: 0.7; box-shadow: 0 12px 32px rgba(0,0,0,0.5); }
+    70%  { transform: perspective(600px) rotateY(-10deg) scale(1.04); opacity: 1; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+    85%  { transform: perspective(600px) rotateY(5deg) scale(1.01); }
+    100% { transform: perspective(600px) rotateY(0deg) scale(1); opacity: 1; box-shadow: 0 4px 16px rgba(0,0,0,0.3); }
   }
   @keyframes flipHide {
-    0%   { transform: rotateY(0deg); }
-    50%  { transform: rotateY(90deg) scaleY(1.04); }
-    100% { transform: rotateY(180deg); }
+    0%   { transform: perspective(600px) rotateY(0deg) scale(1); box-shadow: 0 4px 16px rgba(0,0,0,0.3); }
+    40%  { transform: perspective(600px) rotateY(90deg) scale(1.02); box-shadow: 0 12px 32px rgba(0,0,0,0.5); }
+    70%  { transform: perspective(600px) rotateY(170deg) scale(1.04); }
+    85%  { transform: perspective(600px) rotateY(185deg) scale(1.01); }
+    100% { transform: perspective(600px) rotateY(180deg) scale(1); box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
   }
   .card.flip-reveal {
-    animation: flipReveal 0.55s cubic-bezier(0.4,0,0.2,1) both;
+    animation: flipReveal 0.6s cubic-bezier(0.25,0.46,0.45,0.94) both;
     transform-origin: center;
   }
   .card.flip-hide {
-    animation: flipHide 0.45s cubic-bezier(0.4,0,0.2,1) both;
+    animation: flipHide 0.5s cubic-bezier(0.25,0.46,0.45,0.94) both;
     transform-origin: center;
+  }
+
+  /* Opponent drawn card indicator */
+  .opp-drawn-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    animation: oppDrawSlide 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
+  }
+  @keyframes oppDrawSlide {
+    0% { opacity: 0; transform: translateY(-20px) scale(0.7); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .card.opp-drawn-anim {
+    box-shadow: 0 0 12px 3px rgba(201,168,76,0.25);
+    border-color: rgba(201,168,76,0.35);
+    animation: oppDrawPulse 1.5s ease-in-out infinite;
+  }
+  @keyframes oppDrawPulse {
+    0%, 100% { box-shadow: 0 0 8px 2px rgba(201,168,76,0.2); }
+    50% { box-shadow: 0 0 16px 5px rgba(201,168,76,0.4); }
   }
 
   /* Pulsing turn beacon (replaces the small .turn-indicator dot) */
@@ -1076,6 +1107,13 @@
     font-size: 11px;
     position: relative;
   }
+  /* Player color palette for avatars */
+  .turn-ribbon-circle.player-color-0 { background: rgba(139,157,195,0.3); border-color: #8b9dc3; color: #c5d0e6; }
+  .turn-ribbon-circle.player-color-1 { background: rgba(196,68,68,0.3); border-color: #c44; color: #f0a0a0; }
+  .turn-ribbon-circle.player-color-2 { background: rgba(201,168,76,0.3); border-color: #c9a84c; color: #e8d9a0; }
+  .turn-ribbon-circle.player-color-3 { background: rgba(76,175,80,0.3); border-color: #4caf50; color: #a5d6a7; }
+  .turn-ribbon-circle.player-color-4 { background: rgba(156,39,176,0.3); border-color: #9c27b0; color: #ce93d8; }
+  .turn-ribbon-circle.player-color-5 { background: rgba(0,188,212,0.3); border-color: #00bcd4; color: #80deea; }
   .turn-ribbon-avatar.active .turn-ribbon-circle {
     background: linear-gradient(135deg, #e8c96e, #8a6a20);
     border-color: var(--gold-light);
@@ -1280,7 +1318,7 @@
   .chat-overlay {
     display: none;
     position: fixed;
-    bottom: 68px; left: 8px; right: 8px;
+    bottom: 124px; left: 8px; right: 8px;
     max-width: 400px;
     max-height: 50vh;
     background: rgba(12,17,23,0.55);
@@ -1373,6 +1411,64 @@
     transition: background 0.2s;
   }
   .chat-send-btn:hover { background: rgba(201,168,76,0.25); }
+
+  /* ── EMOJI REACTIONS ── */
+  .reaction-bar {
+    position: fixed;
+    bottom: 68px;
+    right: 16px;
+    display: none;
+    gap: 4px;
+    z-index: 95;
+    background: rgba(12,17,23,0.7);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(201,168,76,0.18);
+    border-radius: 24px;
+    padding: 6px 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  }
+  .reaction-bar.open { display: flex; }
+  .reaction-btn {
+    width: 36px; height: 36px;
+    border: none; background: none;
+    border-radius: 50%;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.12s, background 0.15s;
+  }
+  .reaction-btn:hover { background: rgba(201,168,76,0.15); transform: scale(1.2); }
+  .reaction-btn:active { transform: scale(0.9); }
+  @media (min-width: 600px) {
+    .reaction-bar { right: 20px; bottom: 76px; }
+  }
+
+  /* Floating emoji bubble */
+  .floating-reaction {
+    position: fixed;
+    pointer-events: none;
+    z-index: 200;
+    animation: floatUp 2s ease-out forwards;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+  .floating-reaction .emoji { font-size: 32px; }
+  .floating-reaction .reactor-name {
+    font-size: 9px;
+    color: var(--gold-light);
+    font-family: 'Cinzel', serif;
+    letter-spacing: 0.06em;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+    white-space: nowrap;
+  }
+  @keyframes floatUp {
+    0% { opacity: 1; transform: translateY(0) scale(1); }
+    20% { transform: translateY(-20px) scale(1.15); }
+    100% { opacity: 0; transform: translateY(-120px) scale(0.7); }
+  }
 
 
   /* Fire push assignment — selected source card (mine) + target opp slot (pulses green) */
@@ -1859,7 +1955,10 @@
       <text x="60" y="28" text-anchor="middle" font-family="'Cinzel Decorative',serif" font-size="28" font-weight="700" fill="url(#miniGold)" letter-spacing="3">CABO</text>
     </svg>
     <div class="round-info" style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
-      <div id="roundLabel">Round 1</div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <div id="roundLabel">Round 1</div>
+        <button onclick="toggleSound()" id="soundToggle" title="Toggle sound" style="background:none;border:none;cursor:pointer;font-size:14px;padding:2px;color:var(--gold-light);opacity:0.7">🔊</button>
+      </div>
       <div id="turnStatus" class="status-pill waiting">Waiting...</div>
     </div>
   </div>
@@ -1918,9 +2017,24 @@
 </div>
 
 <!-- Floating chat button -->
-<div class="chat-fab" id="chatFab" onclick="toggleChat()" title="Open chat">
+<div class="chat-fab" id="chatFab" onclick="toggleChat()" title="Open chat" style="bottom:72px">
   <span style="font-size:18px">✉</span>
   <span class="chat-badge" id="chatBadge"></span>
+</div>
+
+<!-- Floating reaction button -->
+<div class="chat-fab" id="reactionFab" onclick="toggleReactionBar()" title="Send reaction" style="bottom:16px">
+  <span style="font-size:18px">😄</span>
+</div>
+
+<!-- Emoji reaction bar -->
+<div class="reaction-bar" id="reactionBar">
+  <button class="reaction-btn" onclick="sendReaction('👏')">👏</button>
+  <button class="reaction-btn" onclick="sendReaction('🔥')">🔥</button>
+  <button class="reaction-btn" onclick="sendReaction('😂')">😂</button>
+  <button class="reaction-btn" onclick="sendReaction('😭')">😭</button>
+  <button class="reaction-btn" onclick="sendReaction('💀')">💀</button>
+  <button class="reaction-btn" onclick="sendReaction('🎉')">🎉</button>
 </div>
 
 <!-- CHAT OVERLAY -->
@@ -2092,6 +2206,239 @@
 </div>
 
 <script>
+// ═══════════════════════════════════════════
+// SOUND ENGINE — synthesized via Web Audio API (no external files)
+// ═══════════════════════════════════════════
+let audioCtx = null;
+let soundEnabled = true;
+
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+const SFX = {
+  // Card draw — quick pluck
+  cardDraw() {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(800, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.08);
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.12);
+  },
+
+  // Card place/discard — soft thud
+  cardPlace() {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(200, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.1);
+    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.15);
+  },
+
+  // Card flip/peek — whoosh
+  cardFlip() {
+    const ctx = getAudioCtx();
+    const bufferSize = ctx.sampleRate * 0.1;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+    }
+    const noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+    const bandpass = ctx.createBiquadFilter();
+    bandpass.type = 'bandpass';
+    bandpass.frequency.setValueAtTime(3000, ctx.currentTime);
+    bandpass.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + 0.1);
+    bandpass.Q.value = 2;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+    noise.connect(bandpass).connect(gain).connect(ctx.destination);
+    noise.start(ctx.currentTime);
+    noise.stop(ctx.currentTime + 0.1);
+  },
+
+  // Fire burn — crackling
+  fireBurn() {
+    const ctx = getAudioCtx();
+    for (let i = 0; i < 4; i++) {
+      const t = ctx.currentTime + i * 0.06;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(100 + Math.random() * 200, t);
+      osc.frequency.exponentialRampToValueAtTime(50, t + 0.08);
+      gain.gain.setValueAtTime(0.12, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.1);
+    }
+    // Crackle noise overlay
+    const bufferSize = ctx.sampleRate * 0.3;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 2) * (Math.random() > 0.7 ? 1 : 0.2);
+    }
+    const noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+    const hp = ctx.createBiquadFilter();
+    hp.type = 'highpass';
+    hp.frequency.value = 2000;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.08, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+    noise.connect(hp).connect(gain).connect(ctx.destination);
+    noise.start(ctx.currentTime);
+    noise.stop(ctx.currentTime + 0.3);
+  },
+
+  // CABO call — dramatic horn
+  caboHorn() {
+    const ctx = getAudioCtx();
+    // Low brass tone
+    const osc1 = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc1.type = 'sawtooth';
+    osc2.type = 'sawtooth';
+    osc1.frequency.setValueAtTime(110, ctx.currentTime);
+    osc1.frequency.setValueAtTime(147, ctx.currentTime + 0.3);
+    osc2.frequency.setValueAtTime(165, ctx.currentTime);
+    osc2.frequency.setValueAtTime(220, ctx.currentTime + 0.3);
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.12, ctx.currentTime + 0.05);
+    gain.gain.setValueAtTime(0.12, ctx.currentTime + 0.5);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 600;
+    osc1.connect(lp);
+    osc2.connect(lp);
+    lp.connect(gain).connect(ctx.destination);
+    osc1.start(ctx.currentTime);
+    osc2.start(ctx.currentTime);
+    osc1.stop(ctx.currentTime + 0.8);
+    osc2.stop(ctx.currentTime + 0.8);
+  },
+
+  // Turn notification — gentle ping
+  turnPing() {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.setValueAtTime(1100, ctx.currentTime + 0.08);
+    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.25);
+  },
+
+  // Win fanfare — ascending arpeggio
+  winFanfare() {
+    const ctx = getAudioCtx();
+    const notes = [262, 330, 392, 523, 659]; // C E G C' E'
+    notes.forEach((freq, i) => {
+      const t = ctx.currentTime + i * 0.12;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, t);
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.12, t + 0.02);
+      gain.gain.setValueAtTime(0.12, t + 0.08);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.4);
+    });
+  },
+
+  // Burn fail — descending buzz
+  burnFail() {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(300, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.25);
+    gain.gain.setValueAtTime(0.08, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.3);
+  },
+
+  // Swap — quick double-tap
+  cardSwap() {
+    const ctx = getAudioCtx();
+    [0, 0.08].forEach(delay => {
+      const t = ctx.currentTime + delay;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(delay === 0 ? 600 : 750, t);
+      gain.gain.setValueAtTime(0.12, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.08);
+    });
+  },
+
+  // Chat message received — subtle blip
+  chatBlip() {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(1200, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + 0.06);
+    gain.gain.setValueAtTime(0.06, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.08);
+  }
+};
+
+function playSound(name) {
+  if (!soundEnabled) return;
+  try { SFX[name]?.(); } catch (e) {}
+}
+
+function toggleSound() {
+  soundEnabled = !soundEnabled;
+  const btn = document.getElementById('soundToggle');
+  if (btn) btn.textContent = soundEnabled ? '🔊' : '🔇';
+  try { localStorage.setItem('cabo:soundEnabled', soundEnabled ? '1' : '0'); } catch (e) {}
+}
+
+// Restore sound preference
+try {
+  const saved = localStorage.getItem('cabo:soundEnabled');
+  if (saved === '0') soundEnabled = false;
+} catch (e) {}
+
 // ═══════════════════════════════════════════
 // GoT-STYLE CARD BACK SVG (inline, no external file)
 // ═══════════════════════════════════════════
@@ -2391,6 +2738,7 @@ function connectToRoom(code, onOpenExtra) {
           }
           if (playSwapNow) {
             window._seenSwapEvents.add(swapEvt.eventId);
+            playSound('cardSwap');
             requestAnimationFrame(() => playObserverSwapAnimation(swapEvt));
             gameState.swapAnimEvent = null;
           }
@@ -2404,6 +2752,8 @@ function connectToRoom(code, onOpenExtra) {
         showToast(msg.message || 'Server error');
       } else if (msg.type === 'chat') {
         receiveChat(msg);
+      } else if (msg.type === 'reaction') {
+        receiveReaction(msg);
       }
       // Reset auto-play clock on any state change
       if (typeof _origAutoPlayCheck === 'function') _origAutoPlayCheck();
@@ -3044,6 +3394,12 @@ function renderGame(gs) {
   const myHand = gs.hands[myId] || [];
   const dc = gs.drawnCard;
 
+  // Play turn notification sound when it becomes my turn
+  if (isMyTurn && gs.currentTurn !== window._lastRenderedTurn && gs.phase !== 'end') {
+    playSound('turnPing');
+  }
+  window._lastRenderedTurn = gs.currentTurn;
+
   // Header — playful taunts instead of round number
   const tauntEl = document.getElementById('roundLabel');
   tauntEl.textContent = getTaunt(gs);
@@ -3202,10 +3558,19 @@ function renderGame(gs) {
       }
     }
 
+    // Show a face-down "drawn card" indicator when this opponent has drawn but not yet acted
+    const hasDrawn = gs.currentTurn === p.id && gs.drawnCard && (gs.phase === 'action' || gs.phase === 'ability');
+    const drawnIndicator = hasDrawn
+      ? `<div class="opp-drawn-card"><div class="card small face-down opp-drawn-anim">${cardBackSVG()}</div><div style="font-size:8px;color:var(--gold-light);font-family:'Cinzel',serif;margin-top:2px;letter-spacing:0.05em">drawn</div></div>`
+      : '';
+
     return `<div class="opponent-zone">
       <div class="opponent-name">${isTurn ? '<span class="turn-beacon"></span>' : ''}${escHtml(p.name)}${gs.phase === 'end' ? ` <span style="font-size:9px;color:var(--gold-dark);margin-left:4px">${gs.scores[p.id] ?? 0}pts</span>` : ''}</div>
       ${topCards.length ? `<div class="opponent-hand" style="margin-bottom:5px;opacity:0.75">${topCards.join('')}</div>` : ''}
-      <div class="opponent-hand">${(bottomCards.length ? bottomCards : topCards).join('')}</div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:8px">
+        <div class="opponent-hand">${(bottomCards.length ? bottomCards : topCards).join('')}</div>
+        ${drawnIndicator}
+      </div>
       ${topCards.length && bottomCards.length ? `<div class="pov-label">← near you →</div>` : ''}
       ${penaltyHtml}
     </div>`;
@@ -3391,6 +3756,7 @@ function renderGame(gs) {
   // Trigger winner screens once when game ends
   if (gs.phase === 'end' && gs.winner && !window._winnerShown) {
     window._winnerShown = true;
+    recordGameResult(gs);
     const w = gs.players.find(p => p.id === gs.winner);
     showWinnerFlash(w?.name || '?');
     // Capture a snapshot of gs so the 800ms delay always uses the correct state
@@ -3650,6 +4016,7 @@ async function drawFromDeck() {
   });
   // Slide a card-back from the deck to the drawn-preview area (only animates for me)
   requestAnimationFrame(() => playDrawAnimation('deckCard'));
+  playSound('cardDraw');
 }
 
 async function drawFromDiscard() {
@@ -3697,6 +4064,7 @@ async function discardDrawn() {
   if (!gs || gs.currentTurn !== myId || gs.phase !== 'action') return;
   // Animate the drawn card sliding from the action area to the discard pile
   playDiscardAnimation('drawnPreview');
+  playSound('cardPlace');
   await mutate(gs => {
     gs.discard.push(gs.drawnCard);
     gs.drawnCard = null;
@@ -4000,6 +4368,8 @@ async function skipAbility() {
 }
 
 async function callCabo() {
+  playSound('caboHorn');
+  emitCaboFlash();
   await mutate(gs => {
     gs.cabo = myId;
     gs.caboLastRound = true;
@@ -4095,6 +4465,13 @@ function _getElCenter(id) {
 }
 
 function playFireBurnAnimation(burnedSlots, pushedMoves) {
+  playSound('fireBurn');
+  // Emit embers from center of the game area
+  const deck = document.getElementById('deckCard');
+  if (deck) {
+    const r = deck.getBoundingClientRect();
+    emitFireEmbers(r.left + r.width / 2, r.top + r.height / 2);
+  }
   // burnedSlots: [{elId, isSmall}]  — cards flying to discard
   // pushedMoves: [{fromId, toId, isSmall}] — starter cards flying to opponent slots
   const overlay = document.getElementById('fireOverlay');
@@ -4203,6 +4580,7 @@ async function burnFireSelection() {
       const burnedValue = freshVals[0] || vals[0];
 
       if (!allSame) {
+        playSound('burnFail');
         reshuffleDeckIfNeeded(gs);
         const penalty1 = gs.deck.pop();
         reshuffleDeckIfNeeded(gs);
@@ -4324,6 +4702,7 @@ async function burnFireSelection() {
       const isValidBurn = allSameValue && (matchesFireValue || freshSelection.length >= 2);
 
       if (!isValidBurn) {
+        playSound('burnFail');
         // Invalid: cards stay in their original slots, responder draws 2 penalty cards.
         // No removal/push happens, so there is nothing to undo and no shuffle risk.
         reshuffleDeckIfNeeded(gs);
@@ -4715,6 +5094,7 @@ async function nextRound() {
 // PEEK OVERLAY
 // ═══════════════════════════════════════════
 function showPeek(msg, card, ownerId, index) {
+  playSound('cardFlip');
   document.getElementById('peekMsg').textContent = msg;
   document.getElementById('peekCardDisplay').innerHTML = renderCardHtml(card, true, '', 'peekCard');
   document.getElementById('peekOverlay').classList.add('show');
@@ -4777,11 +5157,17 @@ function renderDebugState(gs) {
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
-  // Show chat FAB only during the game
-  const fab = document.getElementById('chatFab');
-  if (fab) fab.style.display = (id === 'gameScreen') ? 'flex' : 'none';
-  // Close chat overlay when leaving game screen
-  if (id !== 'gameScreen' && chatOpen) toggleChat();
+  // Show FABs only during the game
+  const chatFab = document.getElementById('chatFab');
+  const reactionFab = document.getElementById('reactionFab');
+  if (chatFab) chatFab.style.display = (id === 'gameScreen') ? 'flex' : 'none';
+  if (reactionFab) reactionFab.style.display = (id === 'gameScreen') ? 'flex' : 'none';
+  // Close overlays when leaving game screen
+  if (id !== 'gameScreen') {
+    if (chatOpen) toggleChat();
+    const bar = document.getElementById('reactionBar');
+    if (bar) bar.classList.remove('open');
+  }
 }
 
 let logLines = [];
@@ -4794,6 +5180,8 @@ function addLog(msg) {
     `<span class="${i === logLines.length - 1 ? 'log-new' : ''}">${escHtml(l)}</span>`
   ).join('');
   el.scrollTop = el.scrollHeight;
+  // Trigger particles for notable events (covers remote players too)
+  if (msg.includes('called CABO') && typeof emitCaboFlash === 'function') emitCaboFlash();
 }
 
 // ═══════════════════════════════════════════
@@ -4818,9 +5206,13 @@ function getChatColor(playerId) {
 function toggleChat() {
   chatOpen = !chatOpen;
   const overlay = document.getElementById('chatOverlay');
-  const fab = document.getElementById('chatFab');
+  const chatFab = document.getElementById('chatFab');
+  const reactionFab = document.getElementById('reactionFab');
+  const reactionBar = document.getElementById('reactionBar');
   overlay.classList.toggle('open', chatOpen);
-  if (fab) fab.style.display = chatOpen ? 'none' : 'flex';
+  if (chatFab) chatFab.style.display = chatOpen ? 'none' : 'flex';
+  if (reactionFab) reactionFab.style.display = chatOpen ? 'none' : 'flex';
+  if (reactionBar) reactionBar.classList.remove('open');
   if (chatOpen) {
     chatUnread = 0;
     updateChatBadge();
@@ -4858,6 +5250,8 @@ function receiveChat(msg) {
     const last = chatMessages[chatMessages.length - 1];
     if (last.playerId === myId && last.text === msg.text && (Date.now() - last.time) < 3000) return;
   }
+  // Sound for incoming messages from others
+  if (msg.playerId !== myId) playSound('chatBlip');
   chatMessages.push({
     playerId: msg.playerId,
     playerName: msg.playerName,
@@ -4906,6 +5300,61 @@ function formatTimeAgo(ts) {
 // Refresh time-ago labels every 30s
 setInterval(() => { if (chatMessages.length > 0) renderChatMessages(); }, 30000);
 
+// ═══════════════════════════════════════════
+// EMOJI REACTIONS
+// ═══════════════════════════════════════════
+let reactionBarOpen = false;
+let reactionCooldown = false;
+
+function toggleReactionBar() {
+  reactionBarOpen = !reactionBarOpen;
+  const bar = document.getElementById('reactionBar');
+  if (bar) bar.classList.toggle('open', reactionBarOpen);
+}
+
+function sendReaction(emoji) {
+  if (!myId || !myName || reactionCooldown) return;
+  // Close the bar after sending
+  reactionBarOpen = false;
+  const bar = document.getElementById('reactionBar');
+  if (bar) bar.classList.remove('open');
+  // Rate limit — 1 reaction per second
+  reactionCooldown = true;
+  setTimeout(() => { reactionCooldown = false; }, 1000);
+  // Show locally immediately
+  showFloatingReaction(emoji, myName, myId);
+  // Broadcast
+  sendToServer({ type: 'reaction', playerId: myId, playerName: myName, emoji: emoji });
+}
+
+function receiveReaction(msg) {
+  // Skip own reactions (already shown locally)
+  if (msg.playerId === myId) return;
+  showFloatingReaction(msg.emoji, msg.playerName, msg.playerId);
+}
+
+function showFloatingReaction(emoji, playerName, playerId) {
+  playSound('chatBlip');
+  // Position: float up from a random horizontal spot in the game area
+  const gameScreen = document.getElementById('gameScreen');
+  if (!gameScreen) return;
+  const rect = gameScreen.getBoundingClientRect();
+  // Random X within the middle 60% of the game area
+  const xMin = rect.left + rect.width * 0.2;
+  const xMax = rect.left + rect.width * 0.8;
+  const x = xMin + Math.random() * (xMax - xMin);
+  const y = rect.top + rect.height * 0.5 + Math.random() * 60 - 30;
+
+  const el = document.createElement('div');
+  el.className = 'floating-reaction';
+  el.style.left = x + 'px';
+  el.style.top = y + 'px';
+  el.innerHTML = `<span class="emoji">${escHtml(emoji)}</span><span class="reactor-name">${escHtml(playerName)}</span>`;
+  document.body.appendChild(el);
+  // Remove after animation completes
+  setTimeout(() => el.remove(), 2100);
+}
+
 let toastTimer = null;
 function showToast(msg) {
   const t = document.getElementById('toast');
@@ -4944,12 +5393,15 @@ function renderTurnRibbon(gs) {
     const isCabo = gs.cabo === p.id;
     const isMe = p.id === myId;
     const initials = (p.name || '?').trim().slice(0, 2).toUpperCase();
+    // Assign consistent color based on original player order
+    const playerIdx = players.findIndex(pl => pl.id === p.id);
+    const colorClass = `player-color-${playerIdx % 6}`;
     const cls = ['turn-ribbon-avatar'];
     if (isActive) cls.push('active');
     if (isMe) cls.push('me');
     parts.push(`
       <div class="${cls.join(' ')}" title="${escHtml(p.name)}${isCabo ? ' — called CABO' : ''}">
-        <div class="turn-ribbon-circle">${escHtml(initials)}</div>
+        <div class="turn-ribbon-circle ${colorClass}">${escHtml(initials)}</div>
         <div class="turn-ribbon-name">${escHtml(p.name || '?')}</div>
         ${isCabo ? '<span class="turn-ribbon-cabo-badge">CABO</span>' : ''}
         <span class="turn-ribbon-conn" title="Connected"></span>
@@ -5174,6 +5626,7 @@ function playFlipBack(elId) {
 // Brief 3D flip animation on slots 2/3 — used at the start of a round
 // (revealing the bottom two) and on Begin (hiding them again).
 function playInitialPeekFlip(direction) {
+  playSound('cardFlip');
   // direction: 'reveal' = face-up appears; 'hide' = flips to face-down
   const cls = direction === 'reveal' ? 'flip-reveal' : 'flip-hide';
   ['my_2', 'my_3'].forEach((id, i) => {
@@ -5395,6 +5848,8 @@ function playDealAnimation(gs) {
 // WINNER FLASH BANNER
 // ═══════════════════════════════════════════
 function showWinnerFlash(name) {
+  playSound('winFanfare');
+  emitWinConfetti();
   const el = document.getElementById('winnerFlash');
   const nameEl = document.getElementById('winnerFlashName');
   if (!el || !nameEl) return;
@@ -5637,7 +6092,14 @@ function playSwapAnimation(elIdA, elIdB, onDone) {
       <div class="wc-row${p.id === gs.winner ? ' winner-row' : ''}">
         <span>${p.id === gs.winner ? '⚔ ' : ''}${escHtml(p.name)}</span>
         <span>${gs.scores[p.id] || 0}</span>
-      </div>`).join('');
+      </div>`).join('') +
+      // MVP stats
+      generateMVPStats(gs) +
+      // Leaderboard
+      `<div style="margin-top:12px;border-top:1px solid rgba(201,168,76,0.15);padding-top:8px">
+        <div style="font-size:10px;color:var(--gold);font-family:'Cinzel',serif;letter-spacing:0.1em;margin-bottom:6px;text-align:center">ALL-TIME LEADERBOARD</div>
+        ${getLeaderboardHTML()}
+      </div>`;
 
     canvas.width  = window.innerWidth;
     canvas.height = window.innerHeight;
@@ -5731,6 +6193,248 @@ document.getElementById('roomCodeInput').addEventListener('input', e => {
     }
   } catch (e) {}
 })();
+
+// ═══════════════════════════════════════════
+// GAME STATS & LEADERBOARD (localStorage)
+// ═══════════════════════════════════════════
+function getStats() {
+  try {
+    return JSON.parse(localStorage.getItem('cabo:stats') || '{}');
+  } catch (e) { return {}; }
+}
+
+function saveStats(stats) {
+  try { localStorage.setItem('cabo:stats', JSON.stringify(stats)); } catch (e) {}
+}
+
+function recordGameResult(gs) {
+  if (!gs || !gs.scores || !gs.players) return;
+  const stats = getStats();
+  for (const p of gs.players) {
+    const key = p.name.toLowerCase().trim();
+    if (!stats[key]) stats[key] = { name: p.name, wins: 0, games: 0, bestScore: Infinity, totalScore: 0 };
+    stats[key].games++;
+    const score = gs.scores[p.id] ?? 0;
+    stats[key].totalScore += score;
+    if (score < stats[key].bestScore) stats[key].bestScore = score;
+    if (p.id === gs.winner) stats[key].wins++;
+    stats[key].name = p.name; // keep name casing updated
+  }
+  saveStats(stats);
+}
+
+function getLeaderboardHTML() {
+  const stats = getStats();
+  const entries = Object.values(stats).sort((a, b) => b.wins - a.wins || (a.totalScore / a.games) - (b.totalScore / b.games));
+  if (entries.length === 0) return '<div style="text-align:center;color:var(--muted);font-size:11px;padding:12px">No games recorded yet.</div>';
+  const titles = ['Novice', 'Schemer', 'Tactician', 'Mastermind', 'Master of Whispers', 'King of CABO'];
+  const getTitle = (wins) => titles[Math.min(wins, titles.length - 1)];
+  return entries.map((e, i) => {
+    const avgScore = e.games > 0 ? (e.totalScore / e.games).toFixed(1) : '-';
+    const medal = i === 0 ? '👑' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
+    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(201,168,76,0.08)">
+      <span style="font-size:14px;width:20px;text-align:center">${medal || (i + 1)}</span>
+      <div style="flex:1">
+        <div style="font-size:12px;color:var(--gold-light);font-family:'Cinzel',serif">${escHtml(e.name)}</div>
+        <div style="font-size:9px;color:var(--muted)">${getTitle(e.wins)} · Avg ${avgScore}pts</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:13px;color:var(--gold);font-family:'Cinzel',serif;font-weight:700">${e.wins}W</div>
+        <div style="font-size:9px;color:var(--muted)">${e.games}G · Best: ${e.bestScore === Infinity ? '-' : e.bestScore}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function generateMVPStats(gs) {
+  if (!gs || !gs.players || !gs.scores) return '';
+  const mvps = [];
+  // Lowest score (winner)
+  const winner = gs.players.find(p => p.id === gs.winner);
+  if (winner) mvps.push({ emoji: '👑', label: 'Lowest Hand', name: winner.name, value: `${gs.scores[winner.id] || 0}pts` });
+  // Highest score (most reckless)
+  const highest = [...gs.players].sort((a, b) => (gs.scores[b.id] || 0) - (gs.scores[a.id] || 0))[0];
+  if (highest && highest.id !== gs.winner) {
+    mvps.push({ emoji: '💀', label: 'Heaviest Hand', name: highest.name, value: `${gs.scores[highest.id] || 0}pts` });
+  }
+  // Perfect score
+  if (winner && (gs.scores[winner.id] || 0) === 0) {
+    mvps.push({ emoji: '✨', label: 'Perfect Game', name: winner.name, value: '0pts!' });
+  }
+  // CABO caller
+  if (gs.cabo) {
+    const caller = gs.players.find(p => p.id === gs.cabo);
+    const callerWon = gs.cabo === gs.winner;
+    if (caller) {
+      mvps.push({
+        emoji: callerWon ? '⚔️' : '😬',
+        label: callerWon ? 'Bold CABO' : 'Failed CABO',
+        name: caller.name,
+        value: `${gs.scores[caller.id] || 0}pts`
+      });
+    }
+  }
+  if (mvps.length === 0) return '';
+  return `<div style="margin-top:10px;border-top:1px solid rgba(201,168,76,0.15);padding-top:8px">
+    <div style="font-size:10px;color:var(--gold);font-family:'Cinzel',serif;letter-spacing:0.1em;margin-bottom:6px;text-align:center">GAME AWARDS</div>
+    ${mvps.map(m => `<div style="display:flex;align-items:center;gap:6px;padding:4px 0">
+      <span style="font-size:16px">${m.emoji}</span>
+      <div style="flex:1">
+        <div style="font-size:10px;color:var(--muted)">${m.label}</div>
+        <div style="font-size:12px;color:var(--gold-light);font-family:'Cinzel',serif">${escHtml(m.name)}</div>
+      </div>
+      <span style="font-size:11px;color:var(--gold);font-family:'Cinzel',serif">${m.value}</span>
+    </div>`).join('')}
+  </div>`;
+}
+
+// ═══════════════════════════════════════════
+// PARTICLE EFFECTS — canvas overlay for embers, confetti, flash
+// ═══════════════════════════════════════════
+const particleCanvas = document.createElement('canvas');
+particleCanvas.id = 'particleCanvas';
+particleCanvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:300';
+document.body.appendChild(particleCanvas);
+const pCtx = particleCanvas.getContext('2d');
+let particles = [];
+let particleAnimId = null;
+
+function resizeParticleCanvas() {
+  particleCanvas.width = window.innerWidth;
+  particleCanvas.height = window.innerHeight;
+}
+resizeParticleCanvas();
+window.addEventListener('resize', resizeParticleCanvas);
+
+function tickParticles() {
+  pCtx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
+  particles = particles.filter(p => p.life > 0);
+  if (particles.length === 0) { particleAnimId = null; return; }
+  for (const p of particles) {
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += p.gravity || 0;
+    p.life -= p.decay;
+    p.rotation = (p.rotation || 0) + (p.spin || 0);
+    const alpha = Math.min(1, p.life / 0.3);
+    pCtx.save();
+    pCtx.globalAlpha = alpha;
+    pCtx.translate(p.x, p.y);
+    pCtx.rotate(p.rotation);
+    if (p.type === 'ember') {
+      const grad = pCtx.createRadialGradient(0, 0, 0, 0, 0, p.size);
+      grad.addColorStop(0, p.color || '#ff6b2b');
+      grad.addColorStop(1, 'transparent');
+      pCtx.fillStyle = grad;
+      pCtx.fillRect(-p.size, -p.size, p.size * 2, p.size * 2);
+    } else if (p.type === 'confetti') {
+      pCtx.fillStyle = p.color;
+      pCtx.fillRect(-p.size / 2, -p.size * 1.5, p.size, p.size * 3);
+    } else if (p.type === 'spark') {
+      pCtx.fillStyle = p.color || '#e8c96e';
+      pCtx.beginPath();
+      pCtx.arc(0, 0, p.size, 0, Math.PI * 2);
+      pCtx.fill();
+    }
+    pCtx.restore();
+  }
+  particleAnimId = requestAnimationFrame(tickParticles);
+}
+
+function spawnParticles(newParticles) {
+  particles.push(...newParticles);
+  if (!particleAnimId) particleAnimId = requestAnimationFrame(tickParticles);
+}
+
+function emitFireEmbers(x, y) {
+  const p = [];
+  for (let i = 0; i < 25; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 1 + Math.random() * 3;
+    p.push({
+      type: 'ember', x, y,
+      vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 2,
+      gravity: 0.03, size: 2 + Math.random() * 4,
+      life: 0.6 + Math.random() * 0.6, decay: 0.015,
+      color: ['#ff6b2b', '#ff9f43', '#ffd32a', '#e74c3c'][Math.floor(Math.random() * 4)]
+    });
+  }
+  spawnParticles(p);
+}
+
+function emitCaboFlash() {
+  const cx = window.innerWidth / 2;
+  const cy = window.innerHeight / 2;
+  const p = [];
+  for (let i = 0; i < 40; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 3 + Math.random() * 6;
+    p.push({
+      type: 'spark', x: cx, y: cy,
+      vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+      gravity: 0.02, size: 1.5 + Math.random() * 2.5,
+      life: 0.5 + Math.random() * 0.5, decay: 0.012,
+      color: ['#e8c96e', '#c9a84c', '#fff5d6', '#ffd700'][Math.floor(Math.random() * 4)]
+    });
+  }
+  spawnParticles(p);
+}
+
+function emitWinConfetti() {
+  const p = [];
+  const colors = ['#e8c96e', '#c9a84c', '#ef4444', '#60a5fa', '#a78bfa', '#34d399', '#fbbf24', '#f97316'];
+  for (let i = 0; i < 80; i++) {
+    p.push({
+      type: 'confetti',
+      x: Math.random() * window.innerWidth,
+      y: -10 - Math.random() * 40,
+      vx: (Math.random() - 0.5) * 3,
+      vy: 1.5 + Math.random() * 3,
+      gravity: 0.02,
+      size: 2 + Math.random() * 3,
+      life: 1.5 + Math.random() * 1.5, decay: 0.008,
+      spin: (Math.random() - 0.5) * 0.2, rotation: Math.random() * Math.PI * 2,
+      color: colors[Math.floor(Math.random() * colors.length)]
+    });
+  }
+  spawnParticles(p);
+  // Second wave
+  setTimeout(() => {
+    const p2 = [];
+    for (let i = 0; i < 50; i++) {
+      p2.push({
+        type: 'confetti',
+        x: Math.random() * window.innerWidth,
+        y: -10 - Math.random() * 40,
+        vx: (Math.random() - 0.5) * 3,
+        vy: 1.5 + Math.random() * 3,
+        gravity: 0.02,
+        size: 2 + Math.random() * 3,
+        life: 1.5 + Math.random() * 1.5, decay: 0.008,
+        spin: (Math.random() - 0.5) * 0.2, rotation: Math.random() * Math.PI * 2,
+        color: colors[Math.floor(Math.random() * colors.length)]
+      });
+    }
+    spawnParticles(p2);
+  }, 600);
+}
+
+// Restore sound toggle icon
+(function restoreSoundIcon() {
+  const btn = document.getElementById('soundToggle');
+  if (btn && !soundEnabled) btn.textContent = '🔇';
+})();
+
+// Close reaction bar when tapping outside
+document.addEventListener('click', (e) => {
+  if (!reactionBarOpen) return;
+  const bar = document.getElementById('reactionBar');
+  const fab = document.getElementById('reactionFab');
+  if (bar && !bar.contains(e.target) && fab && !fab.contains(e.target)) {
+    reactionBarOpen = false;
+    bar.classList.remove('open');
+  }
+});
 </script>
 </body>
 </html>

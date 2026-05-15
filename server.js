@@ -153,6 +153,20 @@ wss.on('connection', (conn, req) => {
         }
         break;
       }
+
+      case 'reaction': {
+        // Broadcast emoji reaction to all players in the room
+        const emoji = (msg.emoji || '').slice(0, 4);
+        if (emoji) {
+          broadcast(room, {
+            type: 'reaction',
+            playerId: msg.playerId,
+            playerName: msg.playerName,
+            emoji: emoji
+          });
+        }
+        break;
+      }
     }
   });
 
