@@ -990,7 +990,7 @@
     transform-origin: center;
   }
 
-  /* Opponent drawn card indicator */
+  /* Opponent drawn card indicator (center row, between deck and discard) */
   .opp-drawn-card {
     display: flex;
     flex-direction: column;
@@ -998,8 +998,8 @@
     animation: oppDrawSlide 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
   }
   @keyframes oppDrawSlide {
-    0% { opacity: 0; transform: translateY(-20px) scale(0.7); }
-    100% { opacity: 1; transform: translateY(0) scale(1); }
+    0% { opacity: 0; transform: translateX(-40px) scale(0.7); }
+    100% { opacity: 1; transform: translateX(0) scale(1); }
   }
   .card.opp-drawn-anim {
     box-shadow: 0 0 12px 3px rgba(201,168,76,0.25);
@@ -1009,6 +1009,9 @@
   @keyframes oppDrawPulse {
     0%, 100% { box-shadow: 0 0 8px 2px rgba(201,168,76,0.2); }
     50% { box-shadow: 0 0 16px 5px rgba(201,168,76,0.4); }
+  }
+  #drawnCardSlot {
+    animation: oppDrawSlide 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
   }
 
   /* Pulsing turn beacon (replaces the small .turn-indicator dot) */
@@ -1415,7 +1418,7 @@
   /* ── EMOJI REACTIONS ── */
   .reaction-bar {
     position: fixed;
-    bottom: 68px;
+    bottom: 124px;
     right: 16px;
     display: none;
     gap: 4px;
@@ -1441,7 +1444,7 @@
   .reaction-btn:hover { background: rgba(201,168,76,0.15); transform: scale(1.2); }
   .reaction-btn:active { transform: scale(0.9); }
   @media (min-width: 600px) {
-    .reaction-bar { right: 20px; bottom: 76px; }
+    .reaction-bar { right: 20px; bottom: 128px; }
   }
 
   /* Floating emoji bubble */
@@ -1979,6 +1982,10 @@
           </div>
           <div id="deckCount" style="font-size:11px;color:var(--muted);margin-top:2px;font-family:'Cinzel',serif"></div>
         </div>
+        <div class="pile-area" id="drawnCardSlot" style="display:none">
+          <div class="pile-label" id="drawnCardLabel">Drawn</div>
+          <div class="card face-down opp-drawn-anim" id="drawnCardIndicator"></div>
+        </div>
         <div class="pile-area">
           <div class="pile-label">Discard</div>
           <div class="pile-stack" id="discardStack" data-depth="0">
@@ -2016,15 +2023,15 @@
   <div class="game-log" id="gameLog"></div>
 </div>
 
-<!-- Floating chat button -->
-<div class="chat-fab" id="chatFab" onclick="toggleChat()" title="Open chat" style="bottom:72px">
-  <span style="font-size:18px">✉</span>
-  <span class="chat-badge" id="chatBadge"></span>
+<!-- Floating reaction button -->
+<div class="chat-fab" id="reactionFab" onclick="toggleReactionBar()" title="Send reaction" style="bottom:72px">
+  <span style="font-size:18px">😄</span>
 </div>
 
-<!-- Floating reaction button -->
-<div class="chat-fab" id="reactionFab" onclick="toggleReactionBar()" title="Send reaction" style="bottom:16px">
-  <span style="font-size:18px">😄</span>
+<!-- Floating chat button -->
+<div class="chat-fab" id="chatFab" onclick="toggleChat()" title="Open chat" style="bottom:16px">
+  <span style="font-size:18px">✉</span>
+  <span class="chat-badge" id="chatBadge"></span>
 </div>
 
 <!-- Emoji reaction bar -->
@@ -2823,6 +2830,8 @@ async function hostGame() {
   myId = genId();
   isHost = true;
   roomCode = genRoomCode();
+  // Clear stats for fresh room
+  clearRoomStats();
   // Persist session for rejoin after accidental refresh
   try {
     localStorage.setItem('cabo:myId', myId);
@@ -3434,6 +3443,23 @@ function renderGame(gs) {
     discardStack.dataset.depth = n >= 6 ? '3' : n >= 2 ? '2' : n >= 1 ? '1' : '0';
   }
 
+  // Drawn card indicator — visible between deck and discard when any player has drawn
+  const drawnSlot = document.getElementById('drawnCardSlot');
+  const drawnIndicator = document.getElementById('drawnCardIndicator');
+  const drawnLabel = document.getElementById('drawnCardLabel');
+  if (drawnSlot && drawnIndicator) {
+    const someoneDrawn = gs.drawnCard && gs.currentTurn && (gs.phase === 'action' || gs.phase === 'ability');
+    if (someoneDrawn) {
+      const drawerName = gs.players.find(p => p.id === gs.currentTurn)?.name || '?';
+      const isMe = gs.currentTurn === myId;
+      drawnSlot.style.display = '';
+      drawnIndicator.innerHTML = cardBackSVG();
+      if (drawnLabel) drawnLabel.textContent = isMe ? 'Your draw' : `${drawerName}'s draw`;
+    } else {
+      drawnSlot.style.display = 'none';
+    }
+  }
+
   // Ability cheat-sheet button visible whenever we're past lobby
   const cheatBtn = document.getElementById('abilityCheatSheetBtn');
   if (cheatBtn) cheatBtn.classList.toggle('show', gs.phase !== 'lobby');
@@ -3558,19 +3584,10 @@ function renderGame(gs) {
       }
     }
 
-    // Show a face-down "drawn card" indicator when this opponent has drawn but not yet acted
-    const hasDrawn = gs.currentTurn === p.id && gs.drawnCard && (gs.phase === 'action' || gs.phase === 'ability');
-    const drawnIndicator = hasDrawn
-      ? `<div class="opp-drawn-card"><div class="card small face-down opp-drawn-anim">${cardBackSVG()}</div><div style="font-size:8px;color:var(--gold-light);font-family:'Cinzel',serif;margin-top:2px;letter-spacing:0.05em">drawn</div></div>`
-      : '';
-
     return `<div class="opponent-zone">
       <div class="opponent-name">${isTurn ? '<span class="turn-beacon"></span>' : ''}${escHtml(p.name)}${gs.phase === 'end' ? ` <span style="font-size:9px;color:var(--gold-dark);margin-left:4px">${gs.scores[p.id] ?? 0}pts</span>` : ''}</div>
       ${topCards.length ? `<div class="opponent-hand" style="margin-bottom:5px;opacity:0.75">${topCards.join('')}</div>` : ''}
-      <div style="display:flex;align-items:center;justify-content:center;gap:8px">
-        <div class="opponent-hand">${(bottomCards.length ? bottomCards : topCards).join('')}</div>
-        ${drawnIndicator}
-      </div>
+      <div class="opponent-hand">${(bottomCards.length ? bottomCards : topCards).join('')}</div>
       ${topCards.length && bottomCards.length ? `<div class="pov-label">← near you →</div>` : ''}
       ${penaltyHtml}
     </div>`;
@@ -5157,13 +5174,14 @@ function renderDebugState(gs) {
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
-  // Show FABs only during the game
+  // Show FABs during game and waiting/lobby screens
+  const showFabs = (id === 'gameScreen' || id === 'waitingScreen');
   const chatFab = document.getElementById('chatFab');
   const reactionFab = document.getElementById('reactionFab');
-  if (chatFab) chatFab.style.display = (id === 'gameScreen') ? 'flex' : 'none';
-  if (reactionFab) reactionFab.style.display = (id === 'gameScreen') ? 'flex' : 'none';
-  // Close overlays when leaving game screen
-  if (id !== 'gameScreen') {
+  if (chatFab) chatFab.style.display = showFabs ? 'flex' : 'none';
+  if (reactionFab) reactionFab.style.display = showFabs ? 'flex' : 'none';
+  // Close overlays when leaving screens that have FABs
+  if (!showFabs) {
     if (chatOpen) toggleChat();
     const bar = document.getElementById('reactionBar');
     if (bar) bar.classList.remove('open');
@@ -6199,12 +6217,16 @@ document.getElementById('roomCodeInput').addEventListener('input', e => {
 // ═══════════════════════════════════════════
 function getStats() {
   try {
-    return JSON.parse(localStorage.getItem('cabo:stats') || '{}');
+    return JSON.parse(localStorage.getItem('cabo:stats:' + roomCode) || '{}');
   } catch (e) { return {}; }
 }
 
 function saveStats(stats) {
-  try { localStorage.setItem('cabo:stats', JSON.stringify(stats)); } catch (e) {}
+  try { localStorage.setItem('cabo:stats:' + roomCode, JSON.stringify(stats)); } catch (e) {}
+}
+
+function clearRoomStats() {
+  try { localStorage.removeItem('cabo:stats:' + roomCode); } catch (e) {}
 }
 
 function recordGameResult(gs) {
