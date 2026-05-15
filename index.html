@@ -990,28 +990,40 @@
     transform-origin: center;
   }
 
-  /* Opponent drawn card indicator (center row, between deck and discard) */
-  .opp-drawn-card {
+  /* Drawn card hovering above the deck */
+  .drawn-hover {
+    position: absolute;
+    top: -8px;
+    left: 50%;
+    transform: translateX(-50%);
     display: flex;
     flex-direction: column;
     align-items: center;
-    animation: oppDrawSlide 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
+    z-index: 10;
+    animation: drawnLift 0.3s cubic-bezier(0.34,1.56,0.64,1) both;
+    pointer-events: none;
   }
-  @keyframes oppDrawSlide {
-    0% { opacity: 0; transform: translateX(-40px) scale(0.7); }
-    100% { opacity: 1; transform: translateX(0) scale(1); }
+  .drawn-hover-label {
+    font-size: 8px;
+    color: var(--gold-light);
+    font-family: 'Cinzel', serif;
+    letter-spacing: 0.05em;
+    margin-top: 2px;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+    white-space: nowrap;
+  }
+  @keyframes drawnLift {
+    0% { top: 18px; opacity: 0; transform: translateX(-50%) scale(0.9); }
+    100% { top: -8px; opacity: 1; transform: translateX(-50%) scale(1); }
   }
   .card.opp-drawn-anim {
-    box-shadow: 0 0 12px 3px rgba(201,168,76,0.25);
+    box-shadow: 0 6px 20px 4px rgba(0,0,0,0.5), 0 0 12px 3px rgba(201,168,76,0.25);
     border-color: rgba(201,168,76,0.35);
-    animation: oppDrawPulse 1.5s ease-in-out infinite;
+    animation: drawnHoverFloat 2s ease-in-out infinite;
   }
-  @keyframes oppDrawPulse {
-    0%, 100% { box-shadow: 0 0 8px 2px rgba(201,168,76,0.2); }
-    50% { box-shadow: 0 0 16px 5px rgba(201,168,76,0.4); }
-  }
-  #drawnCardSlot {
-    animation: oppDrawSlide 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
+  @keyframes drawnHoverFloat {
+    0%, 100% { transform: translateY(0); box-shadow: 0 6px 20px 4px rgba(0,0,0,0.5), 0 0 8px 2px rgba(201,168,76,0.2); }
+    50% { transform: translateY(-4px); box-shadow: 0 10px 28px 6px rgba(0,0,0,0.5), 0 0 16px 5px rgba(201,168,76,0.35); }
   }
 
   /* Pulsing turn beacon (replaces the small .turn-indicator dot) */
@@ -1975,16 +1987,17 @@
     <div class="middle-row">
       <div class="middle-left" id="middleLeft"></div>
       <div class="center-row">
-        <div class="pile-area">
+        <div class="pile-area" style="position:relative">
           <div class="pile-label">Deck</div>
           <div class="pile-stack" id="deckStack" data-depth="3">
             <div class="card face-down clickable" id="deckCard" onclick="drawFromDeck()"></div>
           </div>
           <div id="deckCount" style="font-size:11px;color:var(--muted);margin-top:2px;font-family:'Cinzel',serif"></div>
-        </div>
-        <div class="pile-area" id="drawnCardSlot" style="display:none">
-          <div class="pile-label" id="drawnCardLabel">Drawn</div>
-          <div class="card face-down opp-drawn-anim" id="drawnCardIndicator"></div>
+          <!-- Drawn card hovers above the deck -->
+          <div id="drawnCardSlot" class="drawn-hover" style="display:none">
+            <div class="card face-down opp-drawn-anim" id="drawnCardIndicator"></div>
+            <div class="drawn-hover-label" id="drawnCardLabel">Drawn</div>
+          </div>
         </div>
         <div class="pile-area">
           <div class="pile-label">Discard</div>
