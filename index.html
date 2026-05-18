@@ -27,30 +27,20 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: 'IM Fell English', serif;
-    background: #04060a; /* Fallback deep slate tone */
+    background: var(--green);
     color: var(--cream);
     min-height: 100vh;
     overflow-x: hidden;
   }
-
   body::before {
     content: '';
-    position: fixed; 
-    inset: 0;
-    pointer-events: none;
-   z-index: 0;
-  
+    position: fixed; inset: 0;
     background:
-      /* Layer 1: Dramatic cinematic vignette to shade the screen corners */
-      radial-gradient(circle at center, rgba(16, 26, 43, 0.1) 0%, rgba(3, 5, 8, 0.85) 100%),
-    
-      /* Layer 2: Full responsive premium vector game table layout */
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1920 1080' width='100%25' height='100%25'%3E%3Cdefs%3E%3CradialGradient id='bg' cx='50%25' cy='50%25' r='75%25'%3E%3Cstop offset='0%25' stop-color='%230f1624'/%3E%3Cstop offset='60%25' stop-color='%23070b12'/%3E%3Cstop offset='100%25' stop-color='%23020406'/%3E%3C/radialGradient%3E%3ClinearGradient id='gold' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%238a6f3e'/%3E%3Cstop offset='30%25' stop-color='%23c5a059'/%3E%3Cstop offset='50%25' stop-color='%23fff4d0'/%3E%3Cstop offset='70%25' stop-color='%23c5a059'/%3E%3Cstop offset='100%25' stop-color='%238a6f3e'/%3E%3C/linearGradient%3E%3Cpattern id='velvet' width='16' height='16' patternUnits='userSpaceOnUse'%3E%3Cline x1='0' y1='0' x2='16' y2='16' stroke='%230b111c' stroke-width='0.75'/%3E%3Cline x1='16' y1='0' x2='0' y2='16' stroke='%230b111c' stroke-width='0.75'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='1920' height='1080' fill='url(%23bg)'/%3E%3Crect width='1920' height='1080' fill='url(%23velvet)' opacity='0.7'/%3E%3Cellipse cx='960' cy='540' rx='820' ry='460' fill='none' stroke='url(%23gold)' stroke-width='1' opacity='0.2'/%3E%3Cellipse cx='960' cy='540' rx='800' ry='440' fill='none' stroke='url(%23gold)' stroke-width='2.5' opacity='0.6'/%3E%3Cellipse cx='960' cy='540' rx='785' ry='428' fill='none' stroke='url(%23gold)' stroke-width='0.75' stroke-dasharray='5,6' opacity='0.4'/%3E%3Ccircle cx='960' cy='540' r='300' fill='none' stroke='url(%23gold)' stroke-width='0.5' stroke-dasharray='2,15' opacity='0.25'/%3E%3Cpath d='M 60,60 L 180,60 C 120,70 70,120 60,180 Z' fill='url(%23gold)' opacity='0.4'/%3E%3Cpath d='M 1860,60 L 1740,60 C 1800,70 1850,120 1860,180 Z' fill='url(%23gold)' opacity='0.4'/%3E%3Cpath d='M 60,1020 L 180,1020 C 120,1010 70,960 60,900 Z' fill='url(%23gold)' opacity='0.4'/%3E%3Cpath d='M 1860,1020 L 1740,1020 C 1800,1010 1850,960 1860,900 Z' fill='url(%23gold)' opacity='0.4'/%3E%3Ccircle cx='960' cy='80' r='2' fill='url(%23gold)' opacity='0.5'/%3E%3Ccircle cx='960' cy='1000' r='2' fill='url(%23gold)' opacity='0.5'/%3E%3C/svg%3E");
-  
-    /* Ensures smooth scaling across all modern desktop monitor profiles */
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
+      radial-gradient(ellipse at 20% 50%, rgba(42,92,48,0.18) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 20%, rgba(26,58,30,0.25) 0%, transparent 50%),
+      url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23c9a84c' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
   }
 
   /* ── SCREENS ── */
