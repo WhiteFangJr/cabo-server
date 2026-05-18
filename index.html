@@ -2466,103 +2466,80 @@ function cardBackSVG() {
   return `<svg viewBox="0 0 72 108" xmlns="http://www.w3.org/2000/svg" class="card-back-svg">
     <defs>
       <!-- Multi-stop Premium Metallic Gold Gradient -->
-      <linearGradient id="cb-gold" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%"   stop-color="#8a6f3e"/>
-        <stop offset="20%"  stop-color="#c5a059"/>
-        <stop offset="45%"  stop-color="#f1d48c"/>
-        <stop offset="55%"  stop-color="#fff4d0"/>
-        <stop offset="65%"  stop-color="#f1d48c"/>
-        <stop offset="80%"  stop-color="#c5a059"/>
-        <stop offset="100%" stop-color="#8a6f3e"/>
+      <linearGradient id="micro-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#8a6f3e" />
+        <stop offset="25%" stop-color="#c5a059" />
+        <stop offset="50%" stop-color="#fff4d0" />
+        <stop offset="75%" stop-color="#c5a059" />
+        <stop offset="100%" stop-color="#8a6f3e" />
       </linearGradient>
-      <!-- Horizontal gold (for border lines) -->
-      <linearGradient id="cb-goldh" x1="0%" y1="0%" x2="100%" y2="0%">
-        <stop offset="0%"   stop-color="#8a6f3e"/>
-        <stop offset="50%"  stop-color="#f1d48c"/>
-        <stop offset="100%" stop-color="#8a6f3e"/>
-      </linearGradient>
-      <!-- Deep background -->
-      <radialGradient id="cb-bg" cx="50%" cy="50%" r="75%">
-        <stop offset="0%"   stop-color="#141d2c"/>
-        <stop offset="55%"  stop-color="#0b101a"/>
-        <stop offset="100%" stop-color="#05070a"/>
+
+      <!-- Deep Slate/Navy Background Depth -->
+      <radialGradient id="micro-bg" cx="50%" cy="50%" r="70%">
+        <stop offset="0%" stop-color="#141d2c" />
+        <stop offset="65%" stop-color="#0b101a" />
+        <stop offset="100%" stop-color="#040609" />
       </radialGradient>
-      <!-- Subtle crosshatch texture -->
-      <pattern id="cb-tex" width="4" height="4" patternUnits="userSpaceOnUse">
-        <line x1="0" y1="0" x2="4" y2="4" stroke="#101724" stroke-width="0.3"/>
-        <line x1="4" y1="0" x2="0" y2="4" stroke="#101724" stroke-width="0.3"/>
-      </pattern>
+
+      <!-- Corner Ornate Mini-Wing -->
+      <g id="mini-wing">
+        <path d="M0,0 C2,-1 5,-1 7,1 C5,2 3,1 0,0 Z" fill="url(#micro-gold)" opacity="0.9"/>
+        <path d="M0,1 C2,0 4,0 6,3 C4,3 2,2 0,1 Z" fill="url(#micro-gold)" opacity="0.6"/>
+        <circle cx="0.3" cy="0.3" r="0.4" fill="#fff4d0"/>
+      </g>
     </defs>
 
-    <!-- Base -->
-    <rect width="72" height="108" rx="6" fill="url(#cb-bg)"/>
-    <rect width="72" height="108" rx="6" fill="url(#cb-tex)" opacity="0.8"/>
+    <!-- Base Canvas Layer -->
+    <rect width="72" height="108" fill="url(#micro-bg)"/>
 
-    <!-- Border layers -->
-    <rect x="2"   y="2"   width="68" height="104" rx="5.5" fill="none" stroke="url(#cb-gold)" stroke-width="0.4" opacity="0.3"/>
-    <rect x="3.5" y="3.5" width="65" height="101" rx="4.5" fill="none" stroke="url(#cb-gold)" stroke-width="0.9"/>
-    <rect x="5.5" y="5.5" width="61" height="97"  rx="3"   fill="none" stroke="url(#cb-gold)" stroke-width="0.3" stroke-dasharray="2,1.5" opacity="0.6"/>
+    <!-- OUTER FILIGREE BORDERS -->
+    <rect x="2.5" y="2.5" width="67" height="103" rx="2.5" fill="none" stroke="url(#micro-gold)" stroke-width="0.5"/>
+    <rect x="4" y="4" width="64" height="100" rx="1.5" fill="none" stroke="url(#micro-gold)" stroke-width="0.2" stroke-dasharray="1,1" opacity="0.6"/>
 
-    <!-- Corner dots -->
-    <circle cx="6"  cy="6"   r="1"   fill="#fff4d0" opacity="0.8"/>
-    <circle cx="66" cy="6"   r="1"   fill="#fff4d0" opacity="0.8"/>
-    <circle cx="6"  cy="102" r="1"   fill="#fff4d0" opacity="0.8"/>
-    <circle cx="66" cy="102" r="1"   fill="#fff4d0" opacity="0.8"/>
+    <!-- MATHEMATICAL CENTER AXIS RINGS -->
+    <g id="center-rings">
+      <circle cx="36" cy="54" r="17" fill="none" stroke="url(#micro-gold)" stroke-width="0.2" opacity="0.4"/>
+      <circle cx="36" cy="54" r="15" fill="none" stroke="url(#micro-gold)" stroke-width="0.6"/>
+      <circle cx="36" cy="54" r="13.8" fill="none" stroke="url(#micro-gold)" stroke-width="0.2" stroke-dasharray="0.8,0.8" opacity="0.7"/>
+      <circle cx="36" cy="54" r="9.5" fill="#080c14" stroke="url(#micro-gold)" stroke-width="0.3"/>
+    </g>
 
-    <!-- Corner wing flourishes — TL -->
-    <path d="M6,6 C9,4 14,4 18,8 C14,9 10,8 6,6Z"   fill="url(#cb-gold)" opacity="0.85"/>
-    <path d="M6,8 C10,7 15,8 17,12 C13,11 9,10 6,8Z" fill="url(#cb-gold)" opacity="0.6"/>
-    <!-- TR (mirror) -->
-    <path d="M66,6 C63,4 58,4 54,8 C58,9 62,8 66,6Z"   fill="url(#cb-gold)" opacity="0.85"/>
-    <path d="M66,8 C62,7 57,8 55,12 C59,11 63,10 66,8Z" fill="url(#cb-gold)" opacity="0.6"/>
-    <!-- BL (flip vertical) -->
-    <path d="M6,102 C9,104 14,104 18,100 C14,99 10,100 6,102Z"   fill="url(#cb-gold)" opacity="0.85"/>
-    <path d="M6,100 C10,101 15,100 17,96 C13,97 9,98 6,100Z" fill="url(#cb-gold)" opacity="0.6"/>
-    <!-- BR -->
-    <path d="M66,102 C63,104 58,104 54,100 C58,99 62,100 66,102Z"   fill="url(#cb-gold)" opacity="0.85"/>
-    <path d="M66,100 C62,101 57,100 55,96 C59,97 63,98 66,100Z" fill="url(#cb-gold)" opacity="0.6"/>
+    <!-- ==================== TOP HALF WORKSPACE ==================== -->
+    <g id="top-half-calibrated">
+      <!-- Chiseled Title Wordmark -->
+      <text x="36" y="13.5" font-family="'Georgia', 'Times New Roman', serif" font-size="7.5" font-weight="900" fill="url(#micro-gold)" text-anchor="middle" letter-spacing="1.5">CABO</text>
+      
+      <!-- Corner Asset Placements -->
+      <use href="#mini-wing" transform="translate(5.5, 5.5)" />
+      <use href="#mini-wing" transform="translate(66.5, 5.5) scale(-1, 1)" />
 
-    <!-- Horizontal filigree lines -->
-    <line x1="9" y1="17" x2="63" y2="17" stroke="url(#cb-goldh)" stroke-width="0.5" opacity="0.7"/>
-    <line x1="12" y1="19" x2="60" y2="19" stroke="url(#cb-goldh)" stroke-width="0.3" opacity="0.4"/>
-    <circle cx="36" cy="18" r="1.2" fill="url(#cb-gold)"/>
+      <!-- Border Ornaments -->
+      <path d="M 22,16.5 Q 36,19 50,16.5" fill="none" stroke="url(#micro-gold)" stroke-width="0.3" opacity="0.8"/>
+      <circle cx="36" cy="18.5" r="0.5" fill="url(#micro-gold)"/>
 
-    <line x1="9"  y1="91" x2="63" y2="91" stroke="url(#cb-goldh)" stroke-width="0.5" opacity="0.7"/>
-    <line x1="12" y1="89" x2="60" y2="89" stroke="url(#cb-goldh)" stroke-width="0.3" opacity="0.4"/>
-    <circle cx="36" cy="90" r="1.2" fill="url(#cb-gold)"/>
+      <!-- Micro Side Runes -->
+      <text x="5" y="32" font-family="serif" font-size="3" fill="url(#micro-gold)" opacity="0.4" text-anchor="middle">᚛</text>
+      <text x="5" y="44" font-family="serif" font-size="3" fill="url(#micro-gold)" opacity="0.4" text-anchor="middle">ᚖ</text>
+      <text x="67" y="32" font-family="serif" font-size="3" fill="url(#micro-gold)" opacity="0.4" text-anchor="middle">᚜</text>
+      <text x="67" y="44" font-family="serif" font-size="3" fill="url(#micro-gold)" opacity="0.4" text-anchor="middle">ᚖ</text>
 
-    <!-- Medallion rings (centered at 36, 54) -->
-    <circle cx="36" cy="54" r="17.5" fill="none" stroke="url(#cb-gold)" stroke-width="0.4" opacity="0.4"/>
-    <circle cx="36" cy="54" r="16"   fill="none" stroke="url(#cb-gold)" stroke-width="0.9"/>
-    <circle cx="36" cy="54" r="14.5" fill="none" stroke="url(#cb-gold)" stroke-width="0.25" stroke-dasharray="2,2" opacity="0.7"/>
-    <circle cx="36" cy="54" r="10"   fill="#090d15" stroke="url(#cb-gold)" stroke-width="0.5"/>
+      <!-- Medallion Insides (Top Components) -->
+      <path d="M 36,46.5 C 40,42.5 45,44 48,47.5 C 44,47.5 40,47.5 36,46.5 Z" fill="url(#micro-gold)" opacity="0.7"/>
+      <!-- Wand lines -->
+      <line x1="36" y1="54" x2="44.5" y2="43.5" stroke="url(#micro-gold)" stroke-width="0.5" stroke-linecap="round"/>
+      <circle cx="44.5" cy="43.5" r="0.4" fill="#fff4d0"/>
+    </g>
 
-    <!-- Shield inside medallion -->
-    <path d="M31,44 Q36,42 41,44 Q41,55 36,62 Q31,55 31,44Z" fill="#111824" stroke="url(#cb-gold)" stroke-width="0.7"/>
-    <path d="M32.5,45.5 Q36,43.5 39.5,45.5 Q39.5,55 36,60 Q32.5,55 32.5,45.5Z" fill="none" stroke="url(#cb-gold)" stroke-width="0.25" opacity="0.6"/>
-    <!-- Diamond in shield -->
-    <polygon points="36,48 39,54 36,60 33,54" fill="url(#cb-gold)" opacity="0.9"/>
-    <circle cx="36" cy="54" r="1" fill="#111824"/>
+    <!-- ==================== ABSOLUTE DEAD CENTER SHIELD ==================== -->
+    <g id="center-shield-stabilized">
+      <path d="M 32.5,49.5 Q 36,48.2 39.5,49.5 Q 39.5,55 36,59 Q 32.5,55 32.5,49.5 Z" fill="#101622" stroke="url(#micro-gold)" stroke-width="0.45"/>
+      <polygon points="36,51.5 37.8,54.2 36,57 34.2,54.2" fill="url(#micro-gold)"/>
+    </g>
 
-    <!-- Wing accents flanking shield -->
-    <path d="M36,44 C39,39 45,41 47,46 C43,46 39,45 36,44Z" fill="url(#cb-gold)" opacity="0.7"/>
-    <path d="M36,44 C33,39 27,41 25,46 C29,46 33,45 36,44Z" fill="url(#cb-gold)" opacity="0.7"/>
-    <path d="M36,62 C39,67 45,65 47,60 C43,60 39,61 36,62Z" fill="url(#cb-gold)" opacity="0.7"/>
-    <path d="M36,62 C33,67 27,65 25,60 C29,60 33,61 36,62Z" fill="url(#cb-gold)" opacity="0.7"/>
+    <!-- ==================== ROTATIONAL SYMMETRY CLONE ==================== -->
+    <!-- Inverts everything flawlessly by rotating 180 degrees around coordinates (36, 54) -->
+    <use href="#top-half-calibrated" transform="rotate(180, 36, 54)" />
 
-    <!-- CABO wordmark -->
-    <text x="36" y="83" text-anchor="middle" font-family="'Cinzel Decorative','Cinzel',Georgia,serif"
-          font-size="6.5" font-weight="900" fill="url(#cb-gold)" letter-spacing="2" opacity="0.95">CABO</text>
-
-    <!-- Small top accent dot row -->
-    <circle cx="32" cy="26" r="0.8" fill="url(#cb-gold)" opacity="0.5"/>
-    <circle cx="36" cy="25" r="1"   fill="url(#cb-gold)" opacity="0.7"/>
-    <circle cx="40" cy="26" r="0.8" fill="url(#cb-gold)" opacity="0.5"/>
-
-    <!-- Gloss overlay hint -->
-    <rect width="72" height="108" rx="6"
-          fill="url(#cb-bg)" opacity="0"
-          style="background:linear-gradient(135deg,rgba(255,255,255,0.07) 0%,transparent 55%)"/>
   </svg>`;
 }
 
