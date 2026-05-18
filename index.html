@@ -2490,7 +2490,7 @@ try {
 // ═══════════════════════════════════════════
 // GoT-STYLE CARD BACK SVG (inline, no external file)
 // ═══════════════════════════════════════════
-function cardBackSVG() {
+/* function cardBackSVG() {
   return `<svg viewBox="0 0 72 108" xmlns="http://www.w3.org/2000/svg" class="card-back-svg">
     <defs>
       <!-- Multi-stop Premium Metallic Gold Gradient -->
@@ -2566,6 +2566,82 @@ function cardBackSVG() {
 
     <!-- ==================== ROTATIONAL SYMMETRY CLONE ==================== -->
     <!-- Inverts everything flawlessly by rotating 180 degrees around coordinates (36, 54) -->
+    <use href="#top-half-calibrated" transform="rotate(180, 36, 54)" />
+
+  </svg>`;
+}
+*/
+
+function cardBackSVG() {
+  return `<svg viewBox="0 0 72 108" xmlns="http://www.w3.org/2000/svg" class="card-back-svg">
+    <style>
+      /* Crisp rendering and high-end dramatic drop shadow built directly into the SVG asset */
+      .card-back-svg {
+        filter: drop-shadow(0px 3px 6px rgba(0, 0, 0, 0.85));
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: crisp-edges;
+      }
+    </style>
+    <defs>
+      <linearGradient id="micro-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#8a6f3e" />
+        <stop offset="25%" stop-color="#c5a059" />
+        <stop offset="50%" stop-color="#fff4d0" />
+        <stop offset="75%" stop-color="#c5a059" />
+        <stop offset="100%" stop-color="#8a6f3e" />
+      </linearGradient>
+
+      <radialGradient id="micro-bg" cx="50%" cy="50%" r="70%">
+        <stop offset="0%" stop-color="#1b273a" />
+        <stop offset="65%" stop-color="#0f1624" />
+        <stop offset="100%" stop-color="#06090f" />
+      </radialGradient>
+
+      <g id="mini-wing">
+        <path d="M0,0 C2,-1 5,-1 7,1 C5,2 3,1 0,0 Z" fill="url(#micro-gold)" opacity="0.9"/>
+        <path d="M0,1 C2,0 4,0 6,3 C4,3 2,2 0,1 Z" fill="url(#micro-gold)" opacity="0.6"/>
+        <circle cx="0.3" cy="0.3" r="0.4" fill="#fff4d0"/>
+      </g>
+    </defs>
+
+    <rect width="72" height="108" fill="url(#micro-bg)"/>
+
+    <rect x="0.4" y="0.4" width="71.2" height="107.2" rx="3.6" fill="none" stroke="url(#micro-gold)" stroke-width="0.4" opacity="0.85"/>
+
+    <rect x="2.5" y="2.5" width="67" height="103" rx="2.5" fill="none" stroke="url(#micro-gold)" stroke-width="0.5"/>
+    <rect x="4" y="4" width="64" height="100" rx="1.5" fill="none" stroke="url(#micro-gold)" stroke-width="0.2" stroke-dasharray="1,1" opacity="0.6"/>
+
+    <g id="center-rings">
+      <circle cx="36" cy="54" r="17" fill="none" stroke="url(#micro-gold)" stroke-width="0.2" opacity="0.4"/>
+      <circle cx="36" cy="54" r="15" fill="none" stroke="url(#micro-gold)" stroke-width="0.6"/>
+      <circle cx="36" cy="54" r="13.8" fill="none" stroke="url(#micro-gold)" stroke-width="0.2" stroke-dasharray="0.8,0.8" opacity="0.7"/>
+      <circle cx="36" cy="54" r="9.5" fill="#080c14" stroke="url(#micro-gold)" stroke-width="0.3"/>
+    </g>
+
+    <g id="top-half-calibrated">
+      <text x="36" y="13.5" font-family="'Georgia', 'Times New Roman', serif" font-size="7.5" font-weight="900" fill="url(#micro-gold)" text-anchor="middle" letter-spacing="1.5">CABO</text>
+      
+      <use href="#mini-wing" transform="translate(5.5, 5.5)" />
+      <use href="#mini-wing" transform="translate(66.5, 5.5) scale(-1, 1)" />
+
+      <path d="M 22,16.5 Q 36,19 50,16.5" fill="none" stroke="url(#micro-gold)" stroke-width="0.3" opacity="0.8"/>
+      <circle cx="36" cy="18.5" r="0.5" fill="url(#micro-gold)"/>
+
+      <text x="5" y="32" font-family="serif" font-size="3" fill="url(#micro-gold)" opacity="0.4" text-anchor="middle">᚛</text>
+      <text x="5" y="44" font-family="serif" font-size="3" fill="url(#micro-gold)" opacity="0.4" text-anchor="middle">ᚖ</text>
+      <text x="67" y="32" font-family="serif" font-size="3" fill="url(#micro-gold)" opacity="0.4" text-anchor="middle">᚜</text>
+      <text x="67" y="44" font-family="serif" font-size="3" fill="url(#micro-gold)" opacity="0.4" text-anchor="middle">ᚖ</text>
+
+      <path d="M 36,46.5 C 40,42.5 45,44 48,47.5 C 44,47.5 40,47.5 36,46.5 Z" fill="url(#micro-gold)" opacity="0.7"/>
+      <line x1="36" y1="54" x2="44.5" y2="43.5" stroke="url(#micro-gold)" stroke-width="0.5" stroke-linecap="round"/>
+      <circle cx="44.5" cy="43.5" r="0.4" fill="#fff4d0"/>
+    </g>
+
+    <g id="center-shield-stabilized">
+      <path d="M 32.5,49.5 Q 36,48.2 39.5,49.5 Q 39.5,55 36,59 Q 32.5,55 32.5,49.5 Z" fill="#070b12" stroke="url(#micro-gold)" stroke-width="0.45"/>
+      <polygon points="36,51.5 37.8,54.2 36,57 34.2,54.2" fill="url(#micro-gold)"/>
+    </g>
+
     <use href="#top-half-calibrated" transform="rotate(180, 36, 54)" />
 
   </svg>`;
