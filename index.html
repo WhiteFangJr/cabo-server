@@ -2465,89 +2465,104 @@ try {
 function cardBackSVG() {
   return `<svg viewBox="0 0 72 108" xmlns="http://www.w3.org/2000/svg" class="card-back-svg">
     <defs>
-      <linearGradient id="cbg" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" style="stop-color:#0a1628"/>
-        <stop offset="50%" style="stop-color:#12243a"/>
-        <stop offset="100%" style="stop-color:#0a1628"/>
+      <!-- Multi-stop Premium Metallic Gold Gradient -->
+      <linearGradient id="cb-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%"   stop-color="#8a6f3e"/>
+        <stop offset="20%"  stop-color="#c5a059"/>
+        <stop offset="45%"  stop-color="#f1d48c"/>
+        <stop offset="55%"  stop-color="#fff4d0"/>
+        <stop offset="65%"  stop-color="#f1d48c"/>
+        <stop offset="80%"  stop-color="#c5a059"/>
+        <stop offset="100%" stop-color="#8a6f3e"/>
       </linearGradient>
-      <linearGradient id="cgo" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" style="stop-color:#e8c96e"/>
-        <stop offset="50%" style="stop-color:#c9a84c"/>
-        <stop offset="100%" style="stop-color:#7a5a18"/>
+      <!-- Horizontal gold (for border lines) -->
+      <linearGradient id="cb-goldh" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%"   stop-color="#8a6f3e"/>
+        <stop offset="50%"  stop-color="#f1d48c"/>
+        <stop offset="100%" stop-color="#8a6f3e"/>
       </linearGradient>
-      <linearGradient id="cgh" x1="0%" y1="0%" x2="100%" y2="0%">
-        <stop offset="0%" style="stop-color:#7a5a18"/>
-        <stop offset="50%" style="stop-color:#c9a84c"/>
-        <stop offset="100%" style="stop-color:#7a5a18"/>
-      </linearGradient>
-      <filter id="cbglow">
-        <feGaussianBlur stdDeviation="1.5" result="b"/>
-        <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-      </filter>
+      <!-- Deep background -->
+      <radialGradient id="cb-bg" cx="50%" cy="50%" r="75%">
+        <stop offset="0%"   stop-color="#141d2c"/>
+        <stop offset="55%"  stop-color="#0b101a"/>
+        <stop offset="100%" stop-color="#05070a"/>
+      </radialGradient>
+      <!-- Subtle crosshatch texture -->
+      <pattern id="cb-tex" width="4" height="4" patternUnits="userSpaceOnUse">
+        <line x1="0" y1="0" x2="4" y2="4" stroke="#101724" stroke-width="0.3"/>
+        <line x1="4" y1="0" x2="0" y2="4" stroke="#101724" stroke-width="0.3"/>
+      </pattern>
     </defs>
-    <!-- Card background -->
-    <rect width="72" height="108" rx="7" fill="url(#cbg)"/>
-    <!-- Outer border -->
-    <rect x="2" y="2" width="68" height="104" rx="6" fill="none" stroke="#c9a84c" stroke-width="0.8" opacity="0.5"/>
-    <!-- Inner border -->
-    <rect x="5" y="5" width="62" height="98" rx="4" fill="none" stroke="#8a6a20" stroke-width="0.5" opacity="0.4"/>
-    <!-- Corner ornaments -->
-    <g fill="#c9a84c" opacity="0.7">
-      <!-- TL -->
-      <polygon points="5,5 12,5 5,12" opacity="0.5"/>
-      <circle cx="8" cy="8" r="1.5"/>
-      <!-- TR -->
-      <polygon points="67,5 60,5 67,12" opacity="0.5"/>
-      <circle cx="64" cy="8" r="1.5"/>
-      <!-- BL -->
-      <polygon points="5,103 12,103 5,96" opacity="0.5"/>
-      <circle cx="8" cy="100" r="1.5"/>
-      <!-- BR -->
-      <polygon points="67,103 60,103 67,96" opacity="0.5"/>
-      <circle cx="64" cy="100" r="1.5"/>
-    </g>
-    <!-- Horizontal ornament lines -->
-    <line x1="8" y1="16" x2="64" y2="16" stroke="url(#cgh)" stroke-width="0.6" opacity="0.5"/>
-    <line x1="8" y1="92" x2="64" y2="92" stroke="url(#cgh)" stroke-width="0.6" opacity="0.5"/>
 
-    <!-- Central dragon sigil -->
-    <g transform="translate(36,54)" filter="url(#cbglow)">
-      <!-- Dragon body -->
-      <ellipse cx="0" cy="0" rx="10" ry="7" fill="none" stroke="#c9a84c" stroke-width="1" opacity="0.6"/>
-      <!-- Dragon neck+head -->
-      <path d="M0,-7 C2,-14 6,-16 8,-13 C6,-11 4,-10 2,-8" fill="none" stroke="#c9a84c" stroke-width="1" opacity="0.6"/>
-      <!-- Dragon head -->
-      <ellipse cx="7" cy="-13" rx="3" ry="2" fill="#c9a84c" opacity="0.5"/>
-      <!-- Dragon horn -->
-      <path d="M7,-15 L9,-19 L8,-15" fill="#c9a84c" opacity="0.6"/>
-      <!-- Left wing -->
-      <path d="M-5,-3 C-16,-10 -22,-4 -20,4 C-15,0 -10,-2 -5,-3Z" fill="#c9a84c" opacity="0.3" stroke="#c9a84c" stroke-width="0.5"/>
-      <path d="M-5,-3 C-18,-2 -22,5 -18,8 C-13,4 -9,2 -5,-3Z" fill="#c9a84c" opacity="0.2"/>
-      <!-- Right wing -->
-      <path d="M5,-3 C16,-10 22,-4 20,4 C15,0 10,-2 5,-3Z" fill="#c9a84c" opacity="0.3" stroke="#c9a84c" stroke-width="0.5"/>
-      <path d="M5,-3 C18,-2 22,5 18,8 C13,4 9,2 5,-3Z" fill="#c9a84c" opacity="0.2"/>
-      <!-- Dragon tail -->
-      <path d="M-10,2 C-14,6 -16,12 -12,14 C-10,10 -10,6 -10,2" fill="none" stroke="#c9a84c" stroke-width="0.8" opacity="0.5"/>
-      <!-- Flame -->
-      <path d="M10,-11 C14,-15 18,-14 17,-9 C15,-11 13,-10 10,-11Z" fill="#c9a84c" opacity="0.6"/>
-    </g>
+    <!-- Base -->
+    <rect width="72" height="108" rx="6" fill="url(#cb-bg)"/>
+    <rect width="72" height="108" rx="6" fill="url(#cb-tex)" opacity="0.8"/>
 
-    <!-- CABO text -->
-    <text x="36" y="82" text-anchor="middle" font-family="'Cinzel Decorative','Cinzel',serif" font-size="7.5" font-weight="700" fill="url(#cgo)" opacity="0.9" letter-spacing="1.5">CABO</text>
+    <!-- Border layers -->
+    <rect x="2"   y="2"   width="68" height="104" rx="5.5" fill="none" stroke="url(#cb-gold)" stroke-width="0.4" opacity="0.3"/>
+    <rect x="3.5" y="3.5" width="65" height="101" rx="4.5" fill="none" stroke="url(#cb-gold)" stroke-width="0.9"/>
+    <rect x="5.5" y="5.5" width="61" height="97"  rx="3"   fill="none" stroke="url(#cb-gold)" stroke-width="0.3" stroke-dasharray="2,1.5" opacity="0.6"/>
 
-    <!-- Top mini crown -->
-    <g transform="translate(36,25)" fill="url(#cgo)" opacity="0.7">
-      <polygon points="0,-7 -8,-1 -5,5 0,3 5,5 8,-1"/>
-      <circle cx="-8" cy="-1" r="1.5"/>
-      <circle cx="0" cy="-7" r="2"/>
-      <circle cx="8" cy="-1" r="1.5"/>
-    </g>
+    <!-- Corner dots -->
+    <circle cx="6"  cy="6"   r="1"   fill="#fff4d0" opacity="0.8"/>
+    <circle cx="66" cy="6"   r="1"   fill="#fff4d0" opacity="0.8"/>
+    <circle cx="6"  cy="102" r="1"   fill="#fff4d0" opacity="0.8"/>
+    <circle cx="66" cy="102" r="1"   fill="#fff4d0" opacity="0.8"/>
 
-    <!-- Subtle background hex pattern -->
-    <g stroke="#c9a84c" stroke-width="0.2" fill="none" opacity="0.08">
-      <polygon points="36,10 42,13 42,19 36,22 30,19 30,13"/>
-      <polygon points="36,86 42,89 42,95 36,98 30,95 30,89"/>
-    </g>
+    <!-- Corner wing flourishes — TL -->
+    <path d="M6,6 C9,4 14,4 18,8 C14,9 10,8 6,6Z"   fill="url(#cb-gold)" opacity="0.85"/>
+    <path d="M6,8 C10,7 15,8 17,12 C13,11 9,10 6,8Z" fill="url(#cb-gold)" opacity="0.6"/>
+    <!-- TR (mirror) -->
+    <path d="M66,6 C63,4 58,4 54,8 C58,9 62,8 66,6Z"   fill="url(#cb-gold)" opacity="0.85"/>
+    <path d="M66,8 C62,7 57,8 55,12 C59,11 63,10 66,8Z" fill="url(#cb-gold)" opacity="0.6"/>
+    <!-- BL (flip vertical) -->
+    <path d="M6,102 C9,104 14,104 18,100 C14,99 10,100 6,102Z"   fill="url(#cb-gold)" opacity="0.85"/>
+    <path d="M6,100 C10,101 15,100 17,96 C13,97 9,98 6,100Z" fill="url(#cb-gold)" opacity="0.6"/>
+    <!-- BR -->
+    <path d="M66,102 C63,104 58,104 54,100 C58,99 62,100 66,102Z"   fill="url(#cb-gold)" opacity="0.85"/>
+    <path d="M66,100 C62,101 57,100 55,96 C59,97 63,98 66,100Z" fill="url(#cb-gold)" opacity="0.6"/>
+
+    <!-- Horizontal filigree lines -->
+    <line x1="9" y1="17" x2="63" y2="17" stroke="url(#cb-goldh)" stroke-width="0.5" opacity="0.7"/>
+    <line x1="12" y1="19" x2="60" y2="19" stroke="url(#cb-goldh)" stroke-width="0.3" opacity="0.4"/>
+    <circle cx="36" cy="18" r="1.2" fill="url(#cb-gold)"/>
+
+    <line x1="9"  y1="91" x2="63" y2="91" stroke="url(#cb-goldh)" stroke-width="0.5" opacity="0.7"/>
+    <line x1="12" y1="89" x2="60" y2="89" stroke="url(#cb-goldh)" stroke-width="0.3" opacity="0.4"/>
+    <circle cx="36" cy="90" r="1.2" fill="url(#cb-gold)"/>
+
+    <!-- Medallion rings (centered at 36, 54) -->
+    <circle cx="36" cy="54" r="17.5" fill="none" stroke="url(#cb-gold)" stroke-width="0.4" opacity="0.4"/>
+    <circle cx="36" cy="54" r="16"   fill="none" stroke="url(#cb-gold)" stroke-width="0.9"/>
+    <circle cx="36" cy="54" r="14.5" fill="none" stroke="url(#cb-gold)" stroke-width="0.25" stroke-dasharray="2,2" opacity="0.7"/>
+    <circle cx="36" cy="54" r="10"   fill="#090d15" stroke="url(#cb-gold)" stroke-width="0.5"/>
+
+    <!-- Shield inside medallion -->
+    <path d="M31,44 Q36,42 41,44 Q41,55 36,62 Q31,55 31,44Z" fill="#111824" stroke="url(#cb-gold)" stroke-width="0.7"/>
+    <path d="M32.5,45.5 Q36,43.5 39.5,45.5 Q39.5,55 36,60 Q32.5,55 32.5,45.5Z" fill="none" stroke="url(#cb-gold)" stroke-width="0.25" opacity="0.6"/>
+    <!-- Diamond in shield -->
+    <polygon points="36,48 39,54 36,60 33,54" fill="url(#cb-gold)" opacity="0.9"/>
+    <circle cx="36" cy="54" r="1" fill="#111824"/>
+
+    <!-- Wing accents flanking shield -->
+    <path d="M36,44 C39,39 45,41 47,46 C43,46 39,45 36,44Z" fill="url(#cb-gold)" opacity="0.7"/>
+    <path d="M36,44 C33,39 27,41 25,46 C29,46 33,45 36,44Z" fill="url(#cb-gold)" opacity="0.7"/>
+    <path d="M36,62 C39,67 45,65 47,60 C43,60 39,61 36,62Z" fill="url(#cb-gold)" opacity="0.7"/>
+    <path d="M36,62 C33,67 27,65 25,60 C29,60 33,61 36,62Z" fill="url(#cb-gold)" opacity="0.7"/>
+
+    <!-- CABO wordmark -->
+    <text x="36" y="83" text-anchor="middle" font-family="'Cinzel Decorative','Cinzel',Georgia,serif"
+          font-size="6.5" font-weight="900" fill="url(#cb-gold)" letter-spacing="2" opacity="0.95">CABO</text>
+
+    <!-- Small top accent dot row -->
+    <circle cx="32" cy="26" r="0.8" fill="url(#cb-gold)" opacity="0.5"/>
+    <circle cx="36" cy="25" r="1"   fill="url(#cb-gold)" opacity="0.7"/>
+    <circle cx="40" cy="26" r="0.8" fill="url(#cb-gold)" opacity="0.5"/>
+
+    <!-- Gloss overlay hint -->
+    <rect width="72" height="108" rx="6"
+          fill="url(#cb-bg)" opacity="0"
+          style="background:linear-gradient(135deg,rgba(255,255,255,0.07) 0%,transparent 55%)"/>
   </svg>`;
 }
 
